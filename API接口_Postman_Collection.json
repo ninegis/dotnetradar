@@ -1,0 +1,508 @@
+{
+  "info": {
+    "name": "边坡雷达监测系统 API",
+    "description": "雷达监测系统完整API接口集合",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "radar-system-api-v1",
+    "version": "1.0.0"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8099/api",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. 用户认证",
+      "item": [
+        {
+          "name": "登录",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.success && jsonData.data.token) {",
+                  "        pm.collectionVariables.set('access_token', jsonData.data.token);",
+                  "        console.log('Token已保存:', jsonData.data.token);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "用户登录，获取JWT Token"
+          },
+          "response": []
+        },
+        {
+          "name": "获取当前用户信息",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "me"]
+            },
+            "description": "获取当前登录用户信息"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. 项目管理",
+      "item": [
+        {
+          "name": "获取项目列表",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/project/list",
+              "host": ["{{baseUrl}}"],
+              "path": ["project", "list"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "添加项目",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"projectId\": \"PROJECT001\",\n  \"projectName\": \"测试项目\",\n  \"projectDescribe\": \"这是一个测试项目\",\n  \"contact\": \"张三\",\n  \"phone\": \"13800138000\",\n  \"email\": \"zhangsan@example.com\",\n  \"lon\": 116.404,\n  \"lat\": 39.915,\n  \"alt\": 50.0,\n  \"startTime\": \"\",\n  \"endTime\": \"\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/protocol/add/project",
+              "host": ["{{baseUrl}}"],
+              "path": ["protocol", "add", "project"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "更新项目信息",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"projectId\": \"PROJECT001\",\n  \"name\": \"更新的项目名\",\n  \"description\": \"更新的描述\",\n  \"contact\": \"李四\",\n  \"phone\": \"13900139000\",\n  \"email\": \"lisi@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/custom/updateProjectInfo",
+              "host": ["{{baseUrl}}"],
+              "path": ["custom", "updateProjectInfo"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "删除项目",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/protocol/remove/project?projectId=PROJECT001",
+              "host": ["{{baseUrl}}"],
+              "path": ["protocol", "remove", "project"],
+              "query": [
+                {
+                  "key": "projectId",
+                  "value": "PROJECT001"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "设置项目视角",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"projectId\": \"PROJECT001\",\n  \"lon\": 116.404,\n  \"lat\": 39.915,\n  \"alt\": 1000.0,\n  \"heading\": 0.0,\n  \"pitch\": -30.0,\n  \"roll\": 0.0\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/protocol/set/project/view",
+              "host": ["{{baseUrl}}"],
+              "path": ["protocol", "set", "project", "view"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. 设备管理",
+      "item": [
+        {
+          "name": "添加设备",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"projectId\": \"PROJECT001\",\n  \"deviceName\": \"雷达设备001\",\n  \"deviceId\": \"RADAR001\",\n  \"slaveId\": \"SLAVE001\",\n  \"ori\": \"0\",\n  \"type\": \"ARCSAR\",\n  \"lon\": 116.404,\n  \"lat\": 39.915,\n  \"alt\": 50.0,\n  \"ipv4\": \"192.168.1.100\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/protocol/add/device",
+              "host": ["{{baseUrl}}"],
+              "path": ["protocol", "add", "device"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "删除设备",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/protocol/remove/device?deviceId=RADAR001",
+              "host": ["{{baseUrl}}"],
+              "path": ["protocol", "remove", "device"],
+              "query": [
+                {
+                  "key": "deviceId",
+                  "value": "RADAR001"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4. 监测位置",
+      "item": [
+        {
+          "name": "添加监测点",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"POINT001\",\n  \"projectId\": \"PROJECT001\",\n  \"alarmLevel\": 0,\n  \"visible\": true,\n  \"name\": \"监测点1\",\n  \"type\": \"GEO-POINT\",\n  \"devices\": [\"RADAR001\"],\n  \"coordinates\": [116.404, 39.915],\n  \"defoComputingMethod\": 0,\n  \"enableData\": true,\n  \"enableAlarmArea\": false,\n  \"enableSlope\": false,\n  \"enableShieldArea\": false,\n  \"slopeValue\": 2.0,\n  \"weightValue\": 50.0,\n  \"direction\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/protocol/add/geo",
+              "host": ["{{baseUrl}}"],
+              "path": ["protocol", "add", "geo"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "添加监测区域",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"AREA001\",\n  \"projectId\": \"PROJECT001\",\n  \"alarmLevel\": 0,\n  \"visible\": true,\n  \"name\": \"监测区域1\",\n  \"type\": \"GEO-AREA\",\n  \"devices\": [\"RADAR001\"],\n  \"coordinates\": [\n    [116.404, 39.915],\n    [116.405, 39.915],\n    [116.405, 39.916],\n    [116.404, 39.916],\n    [116.404, 39.915]\n  ],\n  \"defoComputingMethod\": 0,\n  \"enableData\": true,\n  \"enableAlarmArea\": true,\n  \"enableSlope\": false,\n  \"enableShieldArea\": false,\n  \"slopeValue\": 2.0,\n  \"weightValue\": 50.0,\n  \"direction\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/protocol/add/geo",
+              "host": ["{{baseUrl}}"],
+              "path": ["protocol", "add", "geo"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "删除监测位置",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/protocol/remove/geo/POINT001/PROJECT001",
+              "host": ["{{baseUrl}}"],
+              "path": ["protocol", "remove", "geo", "POINT001", "PROJECT001"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "5. 告警规则",
+      "item": [
+        {
+          "name": "获取告警规则列表",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/protocol/query/ruleBatch/PROJECT001",
+              "host": ["{{baseUrl}}"],
+              "path": ["protocol", "query", "ruleBatch", "PROJECT001"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "添加告警规则",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"projectId\": \"PROJECT001\",\n  \"id\": \"RULE001\",\n  \"ruleName\": \"位移告警规则\",\n  \"ruleDescription\": \"当位移超过阈值时触发告警\",\n  \"alarmRule\": \">\",\n  \"enable\": true,\n  \"devices\": [\"RADAR001\"],\n  \"geoMarkArray\": [\"POINT001\"],\n  \"dataSource\": \"10\",\n  \"targetFlag\": false,\n  \"alarmTargetThresholds\": [\n    {\n      \"name\": \"蓝色预警\",\n      \"level\": 1,\n      \"flag\": true,\n      \"targetCheckbox\": [\n        {\n          \"label\": \"位移\",\n          \"value\": 10.0,\n          \"flag\": true,\n          \"timeUnit\": \"\",\n          \"target\": \"displacement\"\n        },\n        {\n          \"label\": \"速度\",\n          \"value\": 5.0,\n          \"flag\": true,\n          \"timeUnit\": \"03\",\n          \"target\": \"speed\"\n        },\n        {\n          \"label\": \"加速度\",\n          \"value\": 2.0,\n          \"flag\": false,\n          \"timeUnit\": \"03\",\n          \"target\": \"acceleration\"\n        }\n      ]\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/protocol/add/ruleBatch",
+              "host": ["{{baseUrl}}"],
+              "path": ["protocol", "add", "ruleBatch"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "删除告警规则",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/protocol/remove/ruleBatch/RULE001/PROJECT001",
+              "host": ["{{baseUrl}}"],
+              "path": ["protocol", "remove", "ruleBatch", "RULE001", "PROJECT001"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "6. 告警联系人",
+      "item": [
+        {
+          "name": "获取联系人列表",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/protocol/query/contact/PROJECT001",
+              "host": ["{{baseUrl}}"],
+              "path": ["protocol", "query", "contact", "PROJECT001"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "添加联系人",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"CONTACT001\",\n  \"name\": \"张三\",\n  \"email\": \"zhangsan@example.com\",\n  \"phone\": \"13800138000\",\n  \"alarmLevel\": 1,\n  \"enable\": true,\n  \"projectId\": \"PROJECT001\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/protocol/add/contact",
+              "host": ["{{baseUrl}}"],
+              "path": ["protocol", "add", "contact"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "删除联系人",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/protocol/remove/contact/CONTACT001/PROJECT001",
+              "host": ["{{baseUrl}}"],
+              "path": ["protocol", "remove", "contact", "CONTACT001", "PROJECT001"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "7. 雷达控制",
+      "item": [
+        {
+          "name": "发送雷达指令",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/arcsar/command/PROJECT001/RADAR001/11/admin",
+              "host": ["{{baseUrl}}"],
+              "path": ["arcsar", "command", "PROJECT001", "RADAR001", "11", "admin"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "8. 雷达参数",
+      "item": [
+        {
+          "name": "更新雷达基础参数",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"projectId\": \"PROJECT001\",\n  \"deviceId\": \"RADAR001\",\n  \"param1\": \"value1\",\n  \"param2\": \"value2\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/protocol/update/radar/param",
+              "host": ["{{baseUrl}}"],
+              "path": ["protocol", "update", "radar", "param"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "9. 雷达图像",
+      "item": [
+        {
+          "name": "查询图像数量",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"projectId\": \"PROJECT001\",\n  \"devId\": \"RADAR001\",\n  \"startDateTime\": \"2025-01-01T00:00:00\",\n  \"endDateTime\": \"2025-01-31T23:59:59\",\n  \"status\": 0,\n  \"type\": 0,\n  \"pageRowSize\": 5\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/sar/image/count",
+              "host": ["{{baseUrl}}"],
+              "path": ["sar", "image", "count"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "查询图像列表",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"projectId\": \"PROJECT001\",\n  \"devId\": \"RADAR001\",\n  \"startDateTime\": \"2025-01-01T00:00:00\",\n  \"endDateTime\": \"2025-01-31T23:59:59\",\n  \"status\": 0,\n  \"type\": 0,\n  \"pageRowSize\": 10,\n  \"page\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/sar/image/list",
+              "host": ["{{baseUrl}}"],
+              "path": ["sar", "image", "list"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
+

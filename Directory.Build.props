@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <PropertyGroup>
+    <!-- 全局抑制警告 -->
+    <NoWarn>$(NoWarn);NU1701;CS1998;CS8625</NoWarn>
+    
+    <!-- 
+      NU1701: TDengine包依赖的Snappy.NET和Crc32C.NET是.NET Framework包
+              这些包在.NET 8中完全兼容，可以安全忽略警告
+      CS1998: 某些async方法暂时没有await（未来功能预留）
+      CS8625: 可空引用类型警告
+    -->
+  </PropertyGroup>
+</Project>
+
