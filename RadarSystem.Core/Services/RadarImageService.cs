@@ -17,16 +17,16 @@ namespace RadarSystem.Core.Services
         }
 
         // 临时简化实现，避免编译错误
-        public async Task<object> GetImagesAsync(string projectId)
+        public Task<object> GetImagesAsync(string projectId)
         {
             _logger.LogInformation("获取雷达图像列表: {ProjectId}", projectId);
-            return new List<object>();
+            return Task.FromResult<object>(new List<object>());
         }
 
-        public async Task<string> GenerateImageAsync(object request)
+        public Task<string> GenerateImageAsync(object request)
         {
             _logger.LogInformation("生成雷达图像");
-            return Guid.NewGuid().ToString();
+            return Task.FromResult(Guid.NewGuid().ToString());
         }
     }
 }

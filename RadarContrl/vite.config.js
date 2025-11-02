@@ -17,4 +17,19 @@ export default defineConfig({
     }
   },
   plugins: [vue()],
+  build: {
+    chunkSizeWarningLimit: 1000, // 提高警告阈值到1000KB
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // 将Cesium单独打包
+          'cesium': ['cesium'],
+          // Vue核心库
+          'vue-vendor': ['vue', 'vue-router'],
+          // 其他第三方库
+          'vendor': ['axios'],
+        },
+      },
+    },
+  },
 })

@@ -14,10 +14,10 @@ namespace RadarSystem.Core.Services
             _logger = logger;
         }
 
-        public async Task<object> GetRadarParamsAsync(string deviceId)
+        public Task<object> GetRadarParamsAsync(string deviceId)
         {
             _logger.LogInformation("获取雷达参数: {DeviceId}", deviceId);
-            return new { };
+            return Task.FromResult<object>(new { });
         }
     }
 }

@@ -17,16 +17,16 @@ namespace RadarSystem.Core.Services
         }
 
         // 临时简化实现，避免编译错误
-        public async Task<object> GetRadarStatusAsync(string deviceId)
+        public Task<object> GetRadarStatusAsync(string deviceId)
         {
             _logger.LogInformation("获取雷达状态: {DeviceId}", deviceId);
-            return new { status = "正常" };
+            return Task.FromResult<object>(new { status = "正常" });
         }
 
-        public async Task<bool> SendCommandAsync(string deviceId, object command)
+        public Task<bool> SendCommandAsync(string deviceId, object command)
         {
             _logger.LogInformation("发送雷达指令: {DeviceId}", deviceId);
-            return true;
+            return Task.FromResult(true);
         }
     }
 }

@@ -28,6 +28,7 @@ namespace RadarSystem.WebAPI.Controllers
         /// 获取设备列表（包含雷达参数和算法参数）
         /// </summary>
         [HttpGet]
+        [AllowAnonymous]
         public async Task<ActionResult<ApiResponse<List<Device>>>> GetDevices([FromQuery] string? projectId = null)
         {
             try

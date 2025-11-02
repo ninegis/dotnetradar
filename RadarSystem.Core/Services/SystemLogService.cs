@@ -14,10 +14,10 @@ namespace RadarSystem.Core.Services
             _logger = logger;
         }
 
-        public async Task<object> GetSystemLogsAsync()
+        public Task<object> GetSystemLogsAsync()
         {
             _logger.LogInformation("获取系统日志");
-            return new List<object>();
+            return Task.FromResult<object>(new List<object>());
         }
     }
 }

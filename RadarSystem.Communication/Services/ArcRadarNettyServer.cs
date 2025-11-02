@@ -61,6 +61,55 @@ namespace RadarSystem.Communication.Services
 
             // 启动图像处理线程
             Task.Run(() => ProcessImageQueue());
+            
+            // ✅ 启动设备映射加载线程
+            Task.Run(() => LoadDeviceMappingAsync());
+        }
+
+        /// <summary>
+        /// 从数据库加载 FactoryId -> DeviceId 映射
+        /// </summary>
+        private async Task LoadDeviceMappingAsync()
+        {
+            try
+            {
+                _logger.LogInformation("正在从API加载设备映射...");
+                
+                // 调用API获取设备列表
+                string apiUrl = $"http://localhost:{_config.ApiPort}/api/Device";
+                using var httpClient = new HttpClient();
+                httpClient.Timeout = TimeSpan.FromSeconds(10);
+                
+                var response = await httpClient.GetAsync(apiUrl);
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    var devices = JsonConvert.DeserializeObject<List<DeviceMappingDto>>(json);
+                    
+                    if (devices != null)
+                    {
+                        foreach (var device in devices)
+                        {
+                            if (!string.IsNullOrEmpty(device.FactoryId))
+                            {
+                                // FactoryId (出厂ID) 就是 SlaveId
+                                _deviceIdMap.TryAdd(device.FactoryId, device.DeviceId);
+                                _logger.LogInformation("加载设备映射: FactoryId={FactoryId} → DeviceId={DeviceId}", 
+                                    device.FactoryId, device.DeviceId);
+                            }
+                        }
+                        _logger.LogInformation("设备映射加载完成，共{Count}个设备", devices.Count);
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("无法从API获取设备列表，HTTP状态码: {StatusCode}", response.StatusCode);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "加载设备映射失败，将使用 SlaveId 作为 DeviceId");
+            }
         }
 
         /// <summary>
@@ -101,8 +150,8 @@ namespace RadarSystem.Communication.Services
                         // 添加日志处理器
                         pipeline.AddLast("logger", new LoggingHandler("ARC-RADAR-CONN"));
 
-                        // 添加圆弧雷达解码器
-                        pipeline.AddLast("decoder", new ArcRadarDecoder());
+                        // ✅ 不使用解码器，直接处理原始字节
+                        // pipeline.AddLast("decoder", new ArcRadarDecoder());
 
                         // 添加业务处理器
                         pipeline.AddLast("handler", new ArcRadarServerHandler(this, _logger));
@@ -176,19 +225,38 @@ namespace RadarSystem.Communication.Services
 
                 // 解析命令
                 string command = hexString.Substring(12, 4);
+                
+                // ✅ Java参考: ByteUtil.stringToInt(hexString.substring(4, 12))  
+                // 使用LITTLE_ENDIAN字节序（与Java一致）
                 string slaveIdHex = hexString.Substring(4, 8);
-                int slaveId = Convert.ToInt32(slaveIdHex, 16);
+                byte[] slaveIdBytes = new byte[4];
+                for (int i = 0; i < 4; i++)
+                {
+                    slaveIdBytes[i] = Convert.ToByte(slaveIdHex.Substring(i * 2, 2), 16);
+                }
+                int slaveId = BitConverter.ToInt32(slaveIdBytes, 0); // LITTLE_ENDIAN
                 string slaveIdStr = slaveId.ToString();
-
-                _logger.LogDebug("接收到圆弧雷达数据，命令: {Command}, SlaveId: {SlaveId}", command, slaveIdStr);
 
                 // 获取设备ID
                 string deviceId = GetDeviceId(slaveIdStr);
                 if (string.IsNullOrEmpty(deviceId))
                 {
-                    _logger.LogWarning("未找到 SlaveId {SlaveId} 对应的设备ID", slaveIdStr);
-                    return;
+                    _logger.LogWarning("未找到 FactoryId/SlaveId {SlaveId} 对应的设备ID，使用FactoryId作为DeviceId", slaveIdStr);
+                    deviceId = slaveIdStr; // 使用 FactoryId 作为 DeviceId
                 }
+
+                // ✅ 使用统一的控制台输出
+                RadarSystem.Communication.Utilities.ConsoleDataLogger.LogDataReceived(
+                    "圆弧雷达",
+                    _config.Port,
+                    slaveIdStr,
+                    $"0x{command}",
+                    data.Length,
+                    hexString,
+                    deviceId);
+
+                _logger.LogInformation("接收到圆弧雷达数据 - 端口:{Port}, FactoryId:{FactoryId}, 命令:0x{Command}, 长度:{Length}字节", 
+                    _config.Port, slaveIdStr, command, data.Length);
 
                 // 保存设备通道
                 _deviceChannelMap.TryAdd(deviceId, context);
@@ -242,21 +310,24 @@ namespace RadarSystem.Communication.Services
                     HandleTimeSync(slaveId, context);
                     break;
 
-                case "0302": // 形变数据上报
-                    _logger.LogInformation("圆弧雷达接收到形变数据上报，设备: {DeviceId}, 数据长度: {Length}", 
-                        deviceId, data.Length);
+                case "0302": // 形变数据 - Java: 0302
+                    _logger.LogInformation("圆弧雷达接收到形变数据上报 - FactoryId:{FactoryId}, DeviceId:{DeviceId}, 数据长度:{Length}字节", 
+                        slaveId, deviceId, data.Length);
+                    Console.WriteLine($"[DATA] 形变数据: FactoryId={slaveId}, Length={data.Length} bytes");
                     HandleImageData(slaveId, deviceId, "00", "形变", data);
                     break;
 
-                case "0301": // 复散射数据上报
-                    _logger.LogInformation("圆弧雷达接收到复散射数据上报，设备: {DeviceId}, 数据长度: {Length}", 
-                        deviceId, data.Length);
+                case "0301": // 复散射数据 - Java: 0301
+                    _logger.LogInformation("圆弧雷达接收到复散射数据上报 - FactoryId:{FactoryId}, DeviceId:{DeviceId}, 数据长度:{Length}字节", 
+                        slaveId, deviceId, data.Length);
+                    Console.WriteLine($"[DATA] 复散射数据: FactoryId={slaveId}, Length={data.Length} bytes");
                     HandleImageData(slaveId, deviceId, "01", "复散射", data);
                     break;
 
-                case "0303": // 置信度数据上报
-                    _logger.LogInformation("圆弧雷达接收到置信度数据上报，设备: {DeviceId}, 数据长度: {Length}", 
-                        deviceId, data.Length);
+                case "0303": // 置信度数据 - Java: 0303
+                    _logger.LogInformation("圆弧雷达接收到置信度数据上报 - FactoryId:{FactoryId}, DeviceId:{DeviceId}, 数据长度:{Length}字节", 
+                        slaveId, deviceId, data.Length);
+                    Console.WriteLine($"[DATA] 置信度数据: FactoryId={slaveId}, Length={data.Length} bytes");
                     HandleImageData(slaveId, deviceId, "02", "置信度", data);
                     break;
 
@@ -324,21 +395,48 @@ namespace RadarSystem.Communication.Services
         }
 
         /// <summary>
-        /// 处理时间同步
+        /// 处理时间同步（参考Java: timeSync）
         /// </summary>
-        private void HandleTimeSync(string slaveId, IChannelHandlerContext context)
+        private void HandleTimeSync(string slaveIdStr, IChannelHandlerContext context)
         {
             _logger.LogInformation("处理时间同步命令，时间: {Time}", DateTime.Now);
 
-            // 构建响应命令
+            // Java: getSlaveIdHexString - 转为反向hex
+            int slaveIdInt = int.Parse(slaveIdStr);
+            string slaveIdHex = GetSlaveIdHexString(slaveIdInt);
+            
+            // Java: String.valueOf(new Date().getTime())
             long timestamp = DateTimeOffset.Now.ToUnixTimeMilliseconds();
-            string timeHex = timestamp.ToString("X").PadLeft(16, '0');
-            int timeLength = timeHex.Length / 2;
-            string lengthHex = timeLength.ToString("X").PadLeft(8, '0');
+            string timeStr = timestamp.ToString();
+            
+            // 转为十六进制字符串（Java: ByteUtil.string2HexString）
+            string timeHex = "";
+            foreach (char c in timeStr)
+            {
+                timeHex += ((int)c).ToString("X2");
+            }
+            
+            int timeHexLength = timeHex.Length / 2;
+            string lengthHex = timeHexLength.ToString("X").PadRight(8, '0');
+            
+            // Java: "3C3C" + slaveIdHexString + "100000" + byteLength + timeHexString
+            string commandHex = $"3C3C{slaveIdHex}1000{lengthHex}{timeHex}";
 
-            string commandHex = $"3C3C{slaveId}1000{lengthHex}{timeHex}";
-
+            _logger.LogInformation("时间同步响应: {Command}", commandHex);
+            Console.WriteLine($"[SEND] TimeSync: {commandHex}");
             SendCommand(context, commandHex);
+        }
+        
+        /// <summary>
+        /// 获取SlaveId十六进制字符串（反向填充，参考Java: getSlaveIdHexString）
+        /// </summary>
+        private string GetSlaveIdHexString(int slaveId)
+        {
+            // Java: ByteUtil.intToHexString(slaveId, 1)
+            string hexString = slaveId.ToString("X");
+            
+            // Java: ByteUtil.fillReverse(hexString, 8, '0')
+            return hexString.PadRight(8, '0');
         }
 
         /// <summary>
@@ -429,31 +527,39 @@ namespace RadarSystem.Communication.Services
         }
 
         /// <summary>
-        /// 发送心跳到 MQTT
+        /// 发送心跳到 MQTT（参考Java: sendHeartbeat）
         /// </summary>
         private void SendHeartbeatToMqtt(string deviceId)
         {
-            long currentTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
-            
-            if (_heartbeatTimeMap.TryGetValue(deviceId, out long lastTime))
+            try
             {
-                if ((currentTime - lastTime) / 1000 < 30)
+                long currentTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+                
+                if (_heartbeatTimeMap.TryGetValue(deviceId, out long lastTime))
                 {
-                    return; // 30秒内不重复发送
+                    if ((currentTime - lastTime) / 1000 < 30)
+                    {
+                        return; // 30秒内不重复发送
+                    }
                 }
+
+                var heartbeat = new
+                {
+                    deviceId = deviceId,
+                    heartBeatClock = "60",
+                    time = DateTime.Now.ToString("yyyyMMddHHmmss")
+                };
+
+                string json = JsonConvert.SerializeObject(heartbeat);
+                _mqttService.PublishAsync("/dev/heartbeat", json).Wait();
+                
+                Console.WriteLine($"[MQTT] Heartbeat sent: {deviceId}");
+                _heartbeatTimeMap[deviceId] = currentTime;
             }
-
-            var heartbeat = new
+            catch (Exception ex)
             {
-                deviceId = deviceId,
-                heartBeatClock = "60",
-                time = DateTime.Now.ToString("yyyyMMddHHmmss")
-            };
-
-            string json = JsonConvert.SerializeObject(heartbeat);
-            _mqttService.PublishAsync("/dev/heartbeat", json).Wait();
-
-            _heartbeatTimeMap[deviceId] = currentTime;
+                _logger.LogDebug(ex, "发送MQTT心跳失败（MQTT不可用）");
+            }
         }
 
         /// <summary>
@@ -494,10 +600,19 @@ namespace RadarSystem.Communication.Services
         /// <summary>
         /// 发送心跳响应
         /// </summary>
-        private void SendHeartbeatResponse(string slaveId, IChannelHandlerContext context)
+        /// <summary>
+        /// 发送心跳响应（参考Java: heartBeatResponse）
+        /// </summary>
+        private void SendHeartbeatResponse(string slaveIdStr, IChannelHandlerContext context)
         {
-            _logger.LogDebug("雷达心跳响应，时间: {Time}", DateTime.Now);
-            string commandHex = $"3C3C{slaveId}00000000000000";
+            int slaveIdInt = int.Parse(slaveIdStr);
+            string slaveIdHex = GetSlaveIdHexString(slaveIdInt);
+            
+            // Java: "3C3C" + slaveIdHexString + "00000000000000"
+            string commandHex = $"3C3C{slaveIdHex}00000000000000";
+            
+            _logger.LogInformation("发送心跳响应: {Command}", commandHex);
+            Console.WriteLine($"[SEND] Heartbeat ACK to FactoryId={slaveIdStr}");
             SendCommand(context, commandHex);
         }
 
@@ -550,51 +665,99 @@ namespace RadarSystem.Communication.Services
         /// </summary>
         private async Task SaveRadarImage(ArcRadarImage radarImage)
         {
+            string fullPath = string.Empty;
+            
             try
             {
+                // radarImage.FilePath已经是完整目录路径
+                string directory = radarImage.FilePath;
+                
                 // 确保目录存在
-                string directory = Path.GetDirectoryName(radarImage.FilePath) ?? "";
                 if (!Directory.Exists(directory))
                 {
                     Directory.CreateDirectory(directory);
+                    _logger.LogInformation("创建目录: {Directory}", directory);
                 }
 
                 // 生成文件名
                 string fileName = $"{radarImage.DataType}_{DateTime.Now:yyyyMMddHHmmss}.dat";
-                string fullPath = Path.Combine(radarImage.FilePath, fileName);
+                fullPath = Path.Combine(directory, fileName);
 
+                _logger.LogInformation("准备保存文件: {FilePath}", fullPath);
+                
                 // 保存文件
                 await File.WriteAllBytesAsync(fullPath, radarImage.Data);
 
-                _logger.LogInformation("保存{TypeName}数据成功: {FilePath}", radarImage.TypeName, fullPath);
+                // ✅ 使用统一的控制台输出
+                RadarSystem.Communication.Utilities.ConsoleDataLogger.LogFileSaved(
+                    "圆弧雷达",
+                    radarImage.DeviceId,
+                    radarImage.SlaveId,
+                    radarImage.DataType,
+                    radarImage.TypeName,
+                    fullPath,
+                    radarImage.Data.Length,
+                    true);
+
+                _logger.LogInformation("保存{TypeName}数据成功: {FilePath}, 大小: {Size}字节", 
+                    radarImage.TypeName, fullPath, radarImage.Data.Length);
             }
             catch (Exception ex)
             {
+                RadarSystem.Communication.Utilities.ConsoleDataLogger.LogFileSaved(
+                    "圆弧雷达",
+                    radarImage.DeviceId,
+                    radarImage.SlaveId,
+                    radarImage.DataType,
+                    radarImage.TypeName,
+                    string.IsNullOrEmpty(fullPath) ? radarImage.FilePath : fullPath,
+                    radarImage.Data.Length,
+                    false,
+                    ex.Message);
+                
                 _logger.LogError(ex, "保存雷达图像失败");
             }
         }
 
         /// <summary>
-        /// 获取设备ID
+        /// 获取设备ID（优先从缓存，其次从映射表）
         /// </summary>
         private string GetDeviceId(string slaveId)
         {
-            if (_deviceIdMap.TryGetValue(slaveId, out string? deviceId))
+            // 优先从内存缓存获取
+            var deviceId = DeviceInfoCache.GetDeviceIdByFactoryId(slaveId);
+            if (!string.IsNullOrEmpty(deviceId))
             {
                 return deviceId;
             }
+            
+            // 其次从本地映射表获取
+            if (_deviceIdMap.TryGetValue(slaveId, out string? mappedId))
+            {
+                return mappedId;
+            }
 
-            // TODO: 从API获取设备列表并更新映射
-            // 这里需要实现设备初始化逻辑
-            return slaveId; // 临时返回 slaveId
+            // 最后返回slaveId本身
+            return slaveId;
         }
 
         /// <summary>
-        /// 获取文件路径
+        /// 获取文件路径：ProjectId/DeviceId_FactoryId/dataType/yyyyMMdd/HHmmss.dat
         /// </summary>
         private string GetFilePath(string dataType, string projectId, string deviceId)
         {
-            return Path.Combine(_config.DataPath, "data", "project", projectId, "radar", deviceId);
+            // 从缓存获取设备信息
+            var device = DeviceInfoCache.GetDevice(deviceId);
+            
+            // 构建目录：DeviceId_FactoryId
+            string deviceFolder = device != null && !string.IsNullOrEmpty(device.FactoryId)
+                ? $"{deviceId}_{device.FactoryId}"
+                : deviceId;
+            
+            string dateFolder = DateTime.Now.ToString("yyyyMMdd");
+            
+            // 路径：basePath/ProjectId/DeviceId_FactoryId/dataType/yyyyMMdd
+            return Path.Combine(_config.DataPath, "data", projectId, deviceFolder, dataType, dateFolder);
         }
 
         /// <summary>
@@ -720,10 +883,27 @@ namespace RadarSystem.Communication.Services
         {
             try
             {
-                if (message is byte[] data)
+                if (message is IByteBuffer buffer)
+                {
+                    // 读取所有可用字节
+                    byte[] data = new byte[buffer.ReadableBytes];
+                    buffer.ReadBytes(data);
+                    
+                    // 显示接收的原始数据（前100字节）
+                    string hex = BitConverter.ToString(data).Replace("-", "").ToUpper();
+                    _logger.LogInformation("收到数据 {Length} 字节, 前缀: {Prefix}", data.Length, hex.Substring(0, Math.Min(32, hex.Length)));
+                    Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] >>> Received {data.Length} bytes, Hex: {hex.Substring(0, Math.Min(100, hex.Length))}...");
+                    
+                    _server.HandleData(data, context);
+                }
+                else if (message is byte[] data)
                 {
                     _server.HandleData(data, context);
                 }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "ChannelRead error");
             }
             finally
             {
@@ -851,6 +1031,17 @@ namespace RadarSystem.Communication.Services
             Command = command;
             Data = data;
         }
+    }
+
+    /// <summary>
+    /// 设备映射DTO（从API获取）
+    /// </summary>
+    public class DeviceMappingDto
+    {
+        public string DeviceId { get; set; } = string.Empty;
+        public string FactoryId { get; set; } = string.Empty;
+        public string DeviceName { get; set; } = string.Empty;
+        public string ProjectId { get; set; } = string.Empty;
     }
 }
 

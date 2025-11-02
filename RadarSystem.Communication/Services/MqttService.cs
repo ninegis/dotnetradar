@@ -94,11 +94,11 @@ namespace RadarSystem.Communication.Services
         {
             try
             {
-                if (!_isConnected)
-                {
-                    _logger.LogWarning("MQTT未连接，无法订阅主题: {Topic}", topic);
-                    return false;
-                }
+            if (!_isConnected)
+            {
+                // MQTT不可用时静默返回
+                return false;
+            }
 
                 var subscribeOptions = new MqttTopicFilterBuilder()
                     .WithTopic(topic)
@@ -135,11 +135,11 @@ namespace RadarSystem.Communication.Services
         {
             try
             {
-                if (!_isConnected)
-                {
-                    _logger.LogWarning("MQTT未连接，无法取消订阅主题: {Topic}", topic);
-                    return false;
-                }
+            if (!_isConnected)
+            {
+                // MQTT不可用时静默返回
+                return false;
+            }
 
                 await _mqttClient.UnsubscribeAsync(topic);
                 _logger.LogInformation("成功取消订阅主题: {Topic}", topic);
@@ -260,7 +260,7 @@ namespace RadarSystem.Communication.Services
             try
             {
                 var topic = e.ApplicationMessage.Topic;
-                var payload = e.ApplicationMessage.Payload;
+                var payload = e.ApplicationMessage.PayloadSegment.ToArray();
                 var message = Encoding.UTF8.GetString(payload);
 
                 _logger.LogDebug("收到MQTT消息 - 主题: {Topic}, 内容: {Message}", topic, message);

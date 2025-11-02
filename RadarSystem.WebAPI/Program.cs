@@ -112,27 +112,27 @@ builder.Services.AddScoped<ScatteringAnalyzer>();
 builder.Services.AddScoped<VelocityAnalyzer>();
 builder.Services.AddScoped<ImageTileGenerator>();
 
-// 注册MQTT配置（暂时禁用）
-// var mqttConfig = new RadarSystem.Communication.Services.MqttConfiguration
-// {
-//     BrokerHost = builder.Configuration.GetValue<string>("Mqtt:BrokerHost") ?? "localhost",
-//     BrokerPort = builder.Configuration.GetValue<int>("Mqtt:BrokerPort", 1883),
-//     ClientId = builder.Configuration.GetValue<string>("Mqtt:ClientId") ?? "RadarSystem",
-//     Username = builder.Configuration.GetValue<string>("Mqtt:Username") ?? "",
-//     Password = builder.Configuration.GetValue<string>("Mqtt:Password") ?? "",
-//     KeepAliveInterval = builder.Configuration.GetValue<int>("Mqtt:KeepAliveInterval", 60),
-//     ReconnectDelay = builder.Configuration.GetValue<int>("Mqtt:ReconnectDelay", 5000)
-// };
+// ✅ 注册MQTT配置
+var mqttConfig = new RadarSystem.Communication.Services.MqttConfiguration
+{
+    BrokerHost = builder.Configuration.GetValue<string>("Mqtt:BrokerHost") ?? "localhost",
+    BrokerPort = builder.Configuration.GetValue<int>("Mqtt:BrokerPort", 1883),
+    ClientId = builder.Configuration.GetValue<string>("Mqtt:ClientId") ?? "RadarSystem",
+    Username = builder.Configuration.GetValue<string>("Mqtt:Username") ?? "",
+    Password = builder.Configuration.GetValue<string>("Mqtt:Password") ?? "",
+    KeepAliveInterval = builder.Configuration.GetValue<int>("Mqtt:KeepAliveInterval", 60),
+    ReconnectDelay = builder.Configuration.GetValue<int>("Mqtt:ReconnectDelay", 5000)
+};
 
-// 注册MQTT服务（暂时禁用，需要MQTT Broker环境）
-// builder.Services.AddSingleton<RadarSystem.Communication.Services.MqttService>(sp =>
-// {
-//     var logger = sp.GetRequiredService<ILogger<RadarSystem.Communication.Services.MqttService>>();
-//     return new RadarSystem.Communication.Services.MqttService(logger, mqttConfig);
-// });
+// ✅ 注册MQTT服务（使用延迟初始化，如果MQTT Broker不可用则只记录警告）
+builder.Services.AddSingleton<RadarSystem.Communication.Services.MqttService>(sp =>
+{
+    var logger = sp.GetRequiredService<ILogger<RadarSystem.Communication.Services.MqttService>>();
+    return new RadarSystem.Communication.Services.MqttService(logger, mqttConfig);
+});
 
-// 注册所有设备Netty服务器（后台服务）（暂时禁用，需要MQTT和设备环境）
-// builder.Services.AddHostedService<RadarSystem.Communication.Services.AllDeviceNettyServersHostedService>();
+// ✅ 注册所有设备Netty服务器（后台服务）
+builder.Services.AddHostedService<RadarSystem.Communication.Services.AllDeviceNettyServersHostedService>();
 
 // 配置 Swagger
 builder.Services.AddEndpointsApiExplorer();
@@ -1193,6 +1193,46 @@ using (var scope = app.Services.CreateScope())
     // 初始化默认数据
     var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
     await userService.InitializeDefaultDataAsync();
+    
+    // ✅ 加载项目和设备信息到内存缓存
+    try
+    {
+        Log.Information("正在加载项目和设备信息到内存缓存...");
+        
+        // 加载项目
+        var projects = db.Projects.ToList();
+        foreach (var project in projects)
+        {
+            RadarSystem.Communication.Services.DeviceInfoCache.AddProject(
+                project.ProjectId, 
+                project.ProjectName);
+        }
+        Log.Information("已加载 {Count} 个项目到缓存", projects.Count);
+        
+        // 加载设备
+        var devices = db.Devices.ToList();
+        foreach (var device in devices)
+        {
+            RadarSystem.Communication.Services.DeviceInfoCache.AddDevice(
+                device.DeviceId,
+                device.FactoryId ?? string.Empty,
+                device.ProjectId,
+                device.DeviceName,
+                device.DeviceType ?? string.Empty);
+        }
+        Log.Information("已加载 {Count} 个设备到缓存", devices.Count);
+        
+        // 显示映射
+        Console.WriteLine("\n╔══════════════════════════════════════════════════════════════╗");
+        Console.WriteLine("║ Device Info Cache Loaded");
+        Console.WriteLine($"║ Projects: {projects.Count}");
+        Console.WriteLine($"║ Devices: {devices.Count}");
+        Console.WriteLine("╚══════════════════════════════════════════════════════════════╝\n");
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "加载设备信息缓存失败");
+    }
 }
 
 var frontendUrl = "http://localhost:6098";
@@ -1218,6 +1258,92 @@ catch (Exception ex)
 {
     Log.Warning(ex, "无法自动打开浏览器");
 }
+
+// ====================================================================
+// ✅ 直接启动圆弧雷达服务器（硬编码，确保启动）
+// ====================================================================
+var arcRadarTask = Task.Run(async () =>
+{
+    try
+    {
+        // 等待3秒确保API基础服务启动
+        await Task.Delay(3000);
+        
+        Console.WriteLine("\n╔══════════════════════════════════════════════════════════════════════════════╗");
+        Console.WriteLine("║ 【ARCRADAR SERVER】Starting...");
+        Console.WriteLine("╚══════════════════════════════════════════════════════════════════════════════╝\n");
+        
+        // ✅ 硬编码配置（避免配置读取问题）
+        var port = 1030;
+        var enabled = true;
+        var projectId = "PROJECT001";
+        var dataPath = "../..";
+        var apiPort = "8099";
+        
+        Console.WriteLine($"Config: Enable={enabled}, Port={port}, ProjectId={projectId}");
+        Log.Information("【ArcRadar】Config: Enable={Enable}, Port={Port}", enabled, port);
+        
+        // 创建配置对象
+        var serverConfig = new RadarSystem.Communication.Services.ArcRadarConfiguration
+        {
+            Port = port,
+            Enable = enabled,
+            ProjectId = projectId,
+            DataPath = dataPath,
+            ApiPort = apiPort
+        };
+        
+        // 获取服务
+        using var scope = app.Services.CreateScope();
+        var mqttService = scope.ServiceProvider.GetRequiredService<RadarSystem.Communication.Services.MqttService>();
+        var loggerFactory = scope.ServiceProvider.GetRequiredService<ILoggerFactory>();
+        var serverLogger = loggerFactory.CreateLogger<RadarSystem.Communication.Services.ArcRadarNettyServer>();
+        
+        // 创建服务器实例
+        Console.WriteLine("正在创建ArcRadarNettyServer实例...");
+        Log.Information("【圆弧雷达】正在创建服务器实例...");
+        
+        var arcServer = new RadarSystem.Communication.Services.ArcRadarNettyServer(
+            serverLogger, 
+            serverConfig, 
+            mqttService);
+        
+        // 启动服务器
+        Console.WriteLine($"正在启动Netty服务器，端口: {port}...");
+        Log.Information("【圆弧雷达】正在启动Netty服务器，端口: {Port}...", port);
+        
+        await arcServer.StartAsync();
+        
+        Console.WriteLine("\n╔══════════════════════════════════════════════════════════════════════════════╗");
+        Console.WriteLine("║ ✅ PORT 1030 - ArcRadar Server STARTED SUCCESSFULLY!");
+        Console.WriteLine($"║    Listening Port: {port}");
+        Console.WriteLine($"║    Project ID: {projectId}");
+        Console.WriteLine($"║    Data Path: {dataPath} (Format: ProjectId/DeviceId_FactoryId/dataType/date)");
+        Console.WriteLine($"║    API Port: {apiPort}");
+        Console.WriteLine($"║    Device Cache: {RadarSystem.Communication.Services.DeviceInfoCache.GetDeviceCount()} devices");
+        Console.WriteLine("║    Waiting for FactoryId=20 device connection...");
+        Console.WriteLine("╚══════════════════════════════════════════════════════════════════════════════╝\n");
+        
+        Log.Information("✅ PORT 1030 - ArcRadar Server STARTED - Listening on port {Port}, Devices in cache: {DeviceCount}", 
+            port, RadarSystem.Communication.Services.DeviceInfoCache.GetDeviceCount());
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine("================================================================================");
+        Console.WriteLine("❌❌❌ 圆弧雷达服务器启动失败！❌❌❌");
+        Console.WriteLine($"   错误: {ex.Message}");
+        Console.WriteLine($"   类型: {ex.GetType().Name}");
+        if (ex.InnerException != null)
+        {
+            Console.WriteLine($"   内部错误: {ex.InnerException.Message}");
+        }
+        Console.WriteLine("================================================================================");
+        
+        Log.Error(ex, "【圆弧雷达】服务器启动失败");
+    }
+});
+
+Log.Information("已触发圆弧雷达服务器异步启动任务");
 
 app.Run();
 

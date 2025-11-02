@@ -23,7 +23,7 @@ namespace RadarSystem.Alarm.Services
             _alarmRecordRepository = alarmRecordRepository;
         }
 
-        public async Task<bool> CreateAlarmRecordAsync(AlarmRecord alarmRecord)
+        public Task<bool> CreateAlarmRecordAsync(AlarmRecord alarmRecord)
         {
             try
             {
@@ -32,16 +32,16 @@ namespace RadarSystem.Alarm.Services
 
                 // 简化实现，避免复杂的类型转换
                 _logger.LogInformation("报警记录创建成功，处理ID: {HandleId}", alarmRecord.HandleId);
-                return true;
+                return Task.FromResult(true);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "创建报警记录失败");
-                return false;
+                return Task.FromResult(false);
             }
         }
 
-        public async Task<List<AlarmRecord>> QueryAlarmRecordsAsync(AlarmQueryRequest request)
+        public Task<List<AlarmRecord>> QueryAlarmRecordsAsync(AlarmQueryRequest request)
         {
             try
             {
@@ -51,16 +51,16 @@ namespace RadarSystem.Alarm.Services
                 var records = new List<AlarmRecord>();
 
                 _logger.LogInformation("查询到 {Count} 条报警记录", records.Count);
-                return records;
+                return Task.FromResult(records);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "查询报警记录失败");
-                return new List<AlarmRecord>();
+                return Task.FromResult(new List<AlarmRecord>());
             }
         }
 
-        public async Task<List<AlarmRecord>> QueryAlarmRecordsByLevelAsync(AlarmQueryRequest request, AlarmLevel level)
+        public Task<List<AlarmRecord>> QueryAlarmRecordsByLevelAsync(AlarmQueryRequest request, AlarmLevel level)
         {
             try
             {
@@ -71,16 +71,16 @@ namespace RadarSystem.Alarm.Services
                 var records = new List<AlarmRecord>();
 
                 _logger.LogInformation("查询到 {Count} 条报警记录", records.Count);
-                return records;
+                return Task.FromResult(records);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "按级别查询报警记录失败");
-                return new List<AlarmRecord>();
+                return Task.FromResult(new List<AlarmRecord>());
             }
         }
 
-        public async Task<List<AlarmRecord>> QueryAlarmRecordsByTimeRangeAsync(AlarmQueryRequest request, DateTime startTime, DateTime endTime)
+        public Task<List<AlarmRecord>> QueryAlarmRecordsByTimeRangeAsync(AlarmQueryRequest request, DateTime startTime, DateTime endTime)
         {
             try
             {
@@ -91,16 +91,16 @@ namespace RadarSystem.Alarm.Services
                 var records = new List<AlarmRecord>();
 
                 _logger.LogInformation("查询到 {Count} 条报警记录", records.Count);
-                return records;
+                return Task.FromResult(records);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "按时间范围查询报警记录失败");
-                return new List<AlarmRecord>();
+                return Task.FromResult(new List<AlarmRecord>());
             }
         }
 
-        public async Task<List<AlarmRecord>> QueryAlarmRecordsByDeviceAsync(AlarmQueryRequest request, string deviceId)
+        public Task<List<AlarmRecord>> QueryAlarmRecordsByDeviceAsync(AlarmQueryRequest request, string deviceId)
         {
             try
             {
@@ -111,16 +111,16 @@ namespace RadarSystem.Alarm.Services
                 var records = new List<AlarmRecord>();
 
                 _logger.LogInformation("查询到 {Count} 条报警记录", records.Count);
-                return records;
+                return Task.FromResult(records);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "按设备查询报警记录失败");
-                return new List<AlarmRecord>();
+                return Task.FromResult(new List<AlarmRecord>());
             }
         }
 
-        public async Task<bool> UpdateAlarmRecordStatusAsync(int handleId, bool status)
+        public Task<bool> UpdateAlarmRecordStatusAsync(int handleId, bool status)
         {
             try
             {
@@ -128,16 +128,16 @@ namespace RadarSystem.Alarm.Services
 
                 // 简化实现
                 _logger.LogInformation("报警记录状态更新成功");
-                return true;
+                return Task.FromResult(true);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "更新报警记录状态失败");
-                return false;
+                return Task.FromResult(false);
             }
         }
 
-        public async Task<bool> DeleteAlarmRecordAsync(int handleId)
+        public Task<bool> DeleteAlarmRecordAsync(int handleId)
         {
             try
             {
@@ -145,16 +145,16 @@ namespace RadarSystem.Alarm.Services
 
                 // 简化实现
                 _logger.LogInformation("报警记录删除成功");
-                return true;
+                return Task.FromResult(true);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "删除报警记录失败");
-                return false;
+                return Task.FromResult(false);
             }
         }
 
-        public async Task<Dictionary<AlarmLevel, int>> GetAlarmCountByLevelAsync(string projectId, string[] ruleIds, DateTime startTime, DateTime endTime)
+        public Task<Dictionary<AlarmLevel, int>> GetAlarmCountByLevelAsync(string projectId, string[] ruleIds, DateTime startTime, DateTime endTime)
         {
             try
             {
@@ -168,16 +168,16 @@ namespace RadarSystem.Alarm.Services
                 }
 
                 _logger.LogInformation("统计完成，各级别报警数量: {Counts}", string.Join(", ", counts.Select(kv => $"{kv.Key}:{kv.Value}")));
-                return counts;
+                return Task.FromResult(counts);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "统计报警数量失败");
-                return new Dictionary<AlarmLevel, int>();
+                return Task.FromResult(new Dictionary<AlarmLevel, int>());
             }
         }
 
-        public async Task<bool> UpdateAlarmHandleStatusAsync(string handleId, string handleStatus)
+        public Task<bool> UpdateAlarmHandleStatusAsync(string handleId, string handleStatus)
         {
             try
             {
@@ -185,16 +185,16 @@ namespace RadarSystem.Alarm.Services
 
                 // 简化实现
                 _logger.LogInformation("报警处理状态更新成功");
-                return true;
+                return Task.FromResult(true);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "更新报警处理状态失败");
-                return false;
+                return Task.FromResult(false);
             }
         }
 
-        public async Task<List<AlarmRecord>> QueryUnscannedAlarmRulesAsync(AlarmQueryRequest request)
+        public Task<List<AlarmRecord>> QueryUnscannedAlarmRulesAsync(AlarmQueryRequest request)
         {
             try
             {
@@ -204,16 +204,16 @@ namespace RadarSystem.Alarm.Services
                 var records = new List<AlarmRecord>();
 
                 _logger.LogInformation("查询到 {Count} 条未扫描的报警记录", records.Count);
-                return records;
+                return Task.FromResult(records);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "查询未扫描的报警规则失败");
-                return new List<AlarmRecord>();
+                return Task.FromResult(new List<AlarmRecord>());
             }
         }
 
-        public async Task<bool> UpdateScanStatusAsync(string[] handleIds, string scanStatus)
+        public Task<bool> UpdateScanStatusAsync(string[] handleIds, string scanStatus)
         {
             try
             {
@@ -221,12 +221,12 @@ namespace RadarSystem.Alarm.Services
 
                 // 简化实现
                 _logger.LogInformation("扫描状态更新成功");
-                return true;
+                return Task.FromResult(true);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "批量更新扫描状态失败");
-                return false;
+                return Task.FromResult(false);
             }
         }
     }

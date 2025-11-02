@@ -121,17 +121,17 @@ namespace RadarSystem.WebAPI.Services
     public interface IProjectServiceExtended : RadarSystem.Core.Interfaces.IProjectService
     {
         Task<object> AddProjectAsync(AddProjectRequest request);
-        Task RemoveProjectAsync(string projectId);
-        Task<object> SetProjectViewAsync(object request);
-        Task<object> UpdateImageAnalysisConfigAsync(object request);
+        new Task RemoveProjectAsync(string projectId);
+        new Task<object> SetProjectViewAsync(object request);
+        new Task<object> UpdateImageAnalysisConfigAsync(object request);
     }
     
     public interface IDeviceServiceExtended : RadarSystem.Core.Interfaces.IDeviceService
     {
-        Task<object> AddDeviceAsync(object request);
-        Task RemoveDeviceAsync(string deviceId);
-        Task<object> GetRadarLastHeartbeatAsync(string deviceId);
-        Task<object> GetRadarOnlineStatusByTimeAsync(string deviceId, string datetime);
+        new Task<object> AddDeviceAsync(object request);
+        new Task RemoveDeviceAsync(string deviceId);
+        new Task<object> GetRadarLastHeartbeatAsync(string deviceId);
+        new Task<object> GetRadarOnlineStatusByTimeAsync(string deviceId, string datetime);
     }
     
 }

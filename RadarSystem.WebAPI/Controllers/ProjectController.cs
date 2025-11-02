@@ -28,6 +28,7 @@ namespace RadarSystem.WebAPI.Controllers
         /// 获取项目列表
         /// </summary>
         [HttpGet]
+        [AllowAnonymous]
         public async Task<ActionResult<ApiResponse<List<Project>>>> GetProjects()
         {
             try

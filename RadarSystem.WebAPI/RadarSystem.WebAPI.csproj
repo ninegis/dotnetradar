@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <SpaRoot>ClientApp\</SpaRoot>
     <SpaProxyServerUrl>http://localhost:8080</SpaProxyServerUrl>
-    <NoWarn>NU1701;CS1998;CS8625</NoWarn>
+    <NoWarn>NU1701;CS1998;CS8625;CS8600;CS8601;CS8603;CS8604</NoWarn>
     <!-- 启用XML文档生成用于Swagger -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);1591</NoWarn>

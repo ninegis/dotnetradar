@@ -17,28 +17,28 @@ namespace RadarSystem.Core.Services
         }
 
         // 临时简化实现，避免编译错误
-        public async Task<object> GetLayersAsync(string projectId)
+        public Task<object> GetLayersAsync(string projectId)
         {
             _logger.LogInformation("获取图层列表: {ProjectId}", projectId);
-            return new List<object>();
+            return Task.FromResult<object>(new List<object>());
         }
 
-        public async Task<string> AddLayerAsync(object request)
+        public Task<string> AddLayerAsync(object request)
         {
             _logger.LogInformation("添加图层");
-            return Guid.NewGuid().ToString();
+            return Task.FromResult(Guid.NewGuid().ToString());
         }
 
-        public async Task<bool> UpdateLayerAsync(object request)
+        public Task<bool> UpdateLayerAsync(object request)
         {
             _logger.LogInformation("更新图层");
-            return true;
+            return Task.FromResult(true);
         }
 
-        public async Task<bool> RemoveLayerAsync(string id)
+        public Task<bool> RemoveLayerAsync(string id)
         {
             _logger.LogInformation("删除图层: {Id}", id);
-            return true;
+            return Task.FromResult(true);
         }
     }
 }
