@@ -70,36 +70,22 @@ const rules = {
 }
 
 const handleLogin = async () => {
-  // 验证表单
-  if (!loginFormRef.value) return
-  
-  await loginFormRef.value.validate(async (valid: boolean) => {
-    if (!valid) return
-    
-    loading.value = true
-    try {
-      console.log('=== 开始登录 ===')
-      console.log('用户名:', loginForm.username)
-      
-      // ✅ 正确方式：使用Pinia Store进行登录
-      const success = await userStore.login(loginForm.username, loginForm.password)
-      
-      if (success) {
-        console.log('✅ 登录成功，Token已保存到Store和localStorage')
-        ElMessage.success('登录成功！')
-        
-        // ✅ 正确方式：使用Vue Router进行路由跳转（无刷新跳转）
-        console.log('使用Vue Router跳转到 /dashboard')
-        await router.push('/dashboard')
-      } else {
-        console.error('❌ 登录失败')
-        ElMessage.error('用户名或密码错误')
+  await loginFormRef.value?.validate(async (valid: boolean) => {
+    if (valid) {
+      loading.value = true
+      try {
+        const success = await userStore.login(loginForm.username, loginForm.password)
+        if (success) {
+          ElMessage.success('登录成功')
+          router.push('/dashboard')
+        } else {
+          ElMessage.error('登录失败，请检查用户名和密码')
+        }
+      } catch (error) {
+        ElMessage.error('登录失败，请检查用户名和密码')
+      } finally {
+        loading.value = false
       }
-    } catch (error) {
-      console.error('❌ 登录异常:', error)
-      ElMessage.error('登录异常，请稍后重试')
-    } finally {
-      loading.value = false
     }
   })
 }

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/kotonline.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>边坡雷达监测系统</title>
+    <!-- ✅ 引入本地C#后端配置 -->
+    <script src="/config.js"></script>
+</head>
+<body>
+<div id="app" style="height: 100%;width: 100%"></div>
+<script type="module" src="/src/main.js"></script>
+<script>
+    // const config = {
+    //     "projectId":"测试项目",
+    //     "projectDesc":"项目描述",
+    //     "projectContact":"项目联系人",
+    //     "projectPhone":"联系人电话",
+    //     "projectEmail":"联系人邮件"
+    // }
+    // window.localrelease = {
+    //     username:'BHDCAdmin',
+    //     password:'slz',
+    //     websocketUrl:'ws://localhost:20007/mqtt',
+    //     url:'http://localhost:20000',
+    //     serverIp:'localhost',
+    //     port:'20000',
+    //     title:'SRS-Slope RT100边坡状态监测系统',
+    //     radar_baseurl:'http://localhost:7777',
+    //           layers:[
+    //          {
+    //              "oid": "000a5ff7-0000-0000-0000-0000a3c43787",
+    //             "name": "2024年10月模型",
+    //              "pfk": "00097221-0000-0001-0000-0000a3c3a0f1",
+    //              "type": "mapServer",
+    //            "ServiceCode": null,
+    //             "ServiceType": "tms",
+    //              "ServiceAddress": "http://localhost/test/{z}/{x}/{y}.png",
+    //             "Enableattribute": "1",
+    //              "Deactivateornot": "1",
+    //          }
+    //     ],
+    // }
+    window['CESIUM_BASE_URL'] = './node_modules/cesium/Build/Cesium';
+    // window['CESIUM_BASE_URL'] = './lib/Cesium';
+</script>
+</body>
+</html>

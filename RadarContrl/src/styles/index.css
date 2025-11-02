@@ -1,0 +1,209 @@
+body {
+    height: 100%;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    font-family: Helvetica Neue, Helvetica, PingFang SC, Hiragino Sans GB, Microsoft YaHei, Arial, sans-serif;
+}
+
+label {
+    font-weight: 700;
+}
+
+html {
+    height: 100%;
+    box-sizing: border-box;
+}
+
+#app {
+    height: 100%;
+    color: #fff;
+    user-select: none;
+}
+
+*,
+*:before,
+*:after {
+    box-sizing: inherit;
+    padding: 0;
+    margin: 0;
+}
+
+.no-padding {
+    padding: 0px !important;
+}
+
+.padding-content {
+    padding: 4px 0;
+}
+
+a:focus,
+a:active {
+    outline: none;
+}
+
+a,
+a:focus,
+a:hover {
+    cursor: pointer;
+    color: inherit;
+    text-decoration: none;
+}
+
+div {
+    box-sizing: border-box;
+}
+
+div:focus {
+    outline: none;
+}
+.dragger-header {
+    margin: 5px 0 5px 0;
+}
+
+.tool-thum {
+    transition: all .2s ease;
+    width: 40px;
+    height: 40px;
+    margin: 0 auto;
+    border-radius: 50%;
+    cursor: pointer;
+    position: relative;
+}
+.tool-thum img{
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%,-50%);
+}
+.custome-row button{
+    margin: 0 20px 0 20px;
+}
+.ToolItemClick{
+    border: 2px solid #1890ff;
+}
+.custom-ant-tree{
+    background-color: rgba(0,0,0,.5);
+    color: white;
+    max-height:550px;
+    overflow: auto;
+}
+.ant-tree-node-content-wrapper:hover{
+    background: rgba(0, 229, 255, 0.3) !important;
+}
+.custom-ant-tree .ant-tree-node-content-wrapper.ant-tree-node-selected{
+    background: rgba(0, 0, 0, 0.5) !important;
+}
+.ant-btn-group .ant-btn-primary:first-child:not(:last-child){
+    border-right-color: transparent;
+}
+.ant-btn-group .ant-btn-primary:last-child:not(:first-child), .ant-btn-group .ant-btn-primary + .ant-btn-primary{
+    border-left-color: transparent;
+}
+.custom-ant-btn,.custom-ant-btn .ant-btn{
+    background-color: rgba(0,0,0,.5);
+    border: 1px solid rgba(32, 160, 255, 0.3);
+}
+.custom-btn{
+    margin: 0 10px;
+}
+.closebtn{
+    float: right;
+    position: absolute;
+    right: 8px;
+    cursor: pointer;
+}
+.selectedTitle{
+    color:rgb(32, 160, 255);
+}
+.ninegis3d-popup-background{
+    background: rgba(0,0,0,.5);
+}
+.ant-descriptions{
+    max-width: 550px;
+}
+.ant-tag, .ant-tag-has-color{
+    background: transparent;
+}
+.el-date-table-cell{
+    color:#196F3D;
+}
+body,
+html {
+    scrollbar-base-color: #f4f7fc;
+    scrollbar-track-color: #f4f7fc;
+    scrollbar-face-color: #797979;
+    scrollbar-arrow-color: #f4f7fc;
+    scrollbar-shadow-color: #f4f7fc;
+    scrollbar-3dlight-color: #f4f7fc;
+    scrollbar-highlight-color: #f4f7fc;
+    scrollbar-darkshadow-color: #f4f7fc;
+}
+
+::-webkit-scrollbar-button {
+    height: 0;
+    width: 0;
+    display: none
+}
+
+::-webkit-scrollbar-track {
+    background: transparent
+}
+
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-thumb {
+    border: 0
+}
+
+::-webkit-scrollbar {
+    height: 10px;
+    width: 10px;
+    background: transparent;
+    border-radius: 5px
+}
+
+::-webkit-scrollbar-thumb {
+    padding-top: 100px;
+    -webkit-box-shadow: inset 1px 1px 0 rgba(0, 0, 0, .1), inset -1px -1px 0 rgba(0, 0, 0, .07);
+    background-color: #797979;
+    min-height: 28px;
+    border-radius: 4px;
+    background-clip: padding-box
+}
+
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-thumb {
+    border: 0
+}
+
+::-webkit-scrollbar-thumb:hover {
+    -webkit-box-shadow: inset 1px 1px 1px rgba(0, 0, 0, .25);
+    background-color: rgba(0, 0, 0, .4)
+}
+
+::-webkit-scrollbar-thumb:active {
+    -webkit-box-shadow: inset 1px 1px 3px rgba(0, 0, 0, .35);
+    background-color: rgba(0, 0, 0, .5)
+}
+.gutter-box{
+    text-align: center;
+}
+.el-form-item__content{
+    text-align: center;
+}
+.el-table th.el-table__cell{
+    background:transparent;
+}
+.dragger-content{
+    padding: 10px;
+}
+.custom-row{
+    margin-top: 10px;
+}
+.custom-row .el-form{
+    width: 100%;
+    padding: 10px;
+}
+.custom-form{
+    padding: 0 10px 0 10px;
+}

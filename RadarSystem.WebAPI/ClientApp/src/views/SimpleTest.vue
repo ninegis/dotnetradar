@@ -1,62 +1,111 @@
 <template>
-  <div style="padding: 40px; background: #f0f0f0; min-height: 100vh;">
-    <h1 style="color: green;">✅ Vue组件正常工作！</h1>
-    <p style="font-size: 18px; margin: 20px 0;">如果你能看到这个页面，说明Vue和Router正常。</p>
-    
-    <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
-      <h2>系统信息：</h2>
-      <ul style="line-height: 2;">
-        <li>✅ Vue 3 已加载</li>
-        <li>✅ Vue Router 工作正常</li>
-        <li>✅ 组件渲染成功</li>
-        <li>✅ Vite开发服务器运行中</li>
-      </ul>
+  <div class="simple-test">
+    <div class="page-header">
+      <h2>简单测试</h2>
+      <p>用于快速测试和调试的页面</p>
     </div>
 
-    <div style="background: #fff3cd; padding: 20px; border-radius: 8px; border-left: 4px solid #ffc107;">
-      <h3>🔧 下一步测试：</h3>
-      <button @click="testRouter" style="margin: 10px; padding: 10px 20px; font-size: 16px; cursor: pointer;">
-        测试路由 - 跳转到Dashboard
-      </button>
-      <button @click="testAPI" style="margin: 10px; padding: 10px 20px; font-size: 16px; cursor: pointer;">
-        测试API - 登录接口
-      </button>
-    </div>
+    <div class="test-content">
+      <el-card>
+        <template #header>
+          <span>测试工具</span>
+        </template>
 
-    <div v-if="message" style="margin-top: 20px; padding: 15px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px;">
-      <strong>测试结果：</strong>
-      <pre style="margin: 10px 0; background: #f8f9fa; padding: 10px; overflow-x: auto;">{{ message }}</pre>
+        <el-form :model="testForm" label-width="120px">
+          <el-form-item label="测试输入">
+            <el-input v-model="testForm.input" placeholder="请输入测试内容" />
+          </el-form-item>
+
+          <el-form-item label="测试选项">
+            <el-select v-model="testForm.option" placeholder="请选择">
+              <el-option label="选项1" value="option1" />
+              <el-option label="选项2" value="option2" />
+              <el-option label="选项3" value="option3" />
+            </el-select>
+          </el-form-item>
+
+          <el-form-item>
+            <el-button type="primary" @click="handleTest">执行测试</el-button>
+            <el-button @click="handleReset">重置</el-button>
+          </el-form-item>
+        </el-form>
+      </el-card>
+
+      <el-card style="margin-top: 20px;" v-if="testResult">
+        <template #header>
+          <span>测试结果</span>
+        </template>
+        <pre>{{ testResult }}</pre>
+      </el-card>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, reactive } from 'vue'
+import { ElMessage } from 'element-plus'
 
-const router = useRouter()
-const message = ref('')
+const testForm = reactive({
+  input: '',
+  option: ''
+})
 
-const testRouter = () => {
-  message.value = '正在跳转到Dashboard...'
-  setTimeout(() => {
-    router.push('/dashboard')
-  }, 1000)
+const testResult = ref('')
+
+const handleTest = () => {
+  if (!testForm.input) {
+    ElMessage.warning('请输入测试内容')
+    return
+  }
+
+  testResult.value = JSON.stringify({
+    timestamp: new Date().toISOString(),
+    input: testForm.input,
+    option: testForm.option,
+    status: 'success'
+  }, null, 2)
+
+  ElMessage.success('测试执行成功')
 }
 
-const testAPI = async () => {
-  try {
-    message.value = '正在测试API...'
-    const response = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: 'admin', password: 'admin123' })
-    })
-    const data = await response.json()
-    message.value = JSON.stringify(data, null, 2)
-  } catch (error) {
-    message.value = '错误: ' + error
-  }
+const handleReset = () => {
+  testForm.input = ''
+  testForm.option = ''
+  testResult.value = ''
+  ElMessage.info('已重置')
 }
 </script>
+
+<style scoped>
+.simple-test {
+  padding: 20px;
+}
+
+.page-header {
+  margin-bottom: 20px;
+}
+
+.page-header h2 {
+  margin: 0 0 8px 0;
+  font-size: 20px;
+  font-weight: 500;
+}
+
+.page-header p {
+  margin: 0;
+  color: #666;
+  font-size: 14px;
+}
+
+.test-content {
+  max-width: 800px;
+}
+
+pre {
+  background: #f5f5f5;
+  padding: 15px;
+  border-radius: 4px;
+  overflow-x: auto;
+}
+</style>
 

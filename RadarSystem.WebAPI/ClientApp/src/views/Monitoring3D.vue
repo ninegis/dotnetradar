@@ -1,135 +1,165 @@
 <template>
-  <div class="monitoring-3d-simple">
-    <div class="header">
-      <h1>🎉 欢迎进入边坡雷达三维监测系统</h1>
-      <p>登录成功！系统主界面已加载</p>
-      <el-button type="primary" @click="handleLogout">退出登录</el-button>
-      <el-button @click="goToDashboard">返回仪表盘</el-button>
+  <div class="monitoring-3d">
+    <div class="page-header">
+      <h2>三维监测</h2>
+      <p>实时三维场景监测与数据可视化</p>
     </div>
-    
-    <div class="content">
-      <el-card>
-        <template #header>
-          <div class="card-header">
-            <span>系统状态</span>
-            <el-tag type="success">运行中</el-tag>
+
+    <div class="monitoring-container">
+      <div class="cesium-container" ref="cesiumContainer">
+        <!-- Cesium 三维场景容器 -->
+        <div id="cesiumViewer" class="cesium-viewer"></div>
+      </div>
+
+      <div class="control-panel">
+        <el-card>
+          <template #header>
+            <span>场景控制</span>
+          </template>
+          <div class="control-content">
+            <el-button type="primary" @click="handleResetView">重置视角</el-button>
+            <el-button @click="handleToggleFullscreen">全屏</el-button>
           </div>
-        </template>
-        <el-descriptions :column="2" border>
-          <el-descriptions-item label="项目名称">新疆天隆希望矿区</el-descriptions-item>
-          <el-descriptions-item label="在线状态">
-            <el-tag type="success">在线</el-tag>
-          </el-descriptions-item>
-          <el-descriptions-item label="监测点数量">15</el-descriptions-item>
-          <el-descriptions-item label="设备数量">8</el-descriptions-item>
-          <el-descriptions-item label="当前用户">管理员</el-descriptions-item>
-          <el-descriptions-item label="登录时间">{{ loginTime }}</el-descriptions-item>
-        </el-descriptions>
-      </el-card>
+        </el-card>
 
-      <el-row :gutter="20" style="margin-top: 20px">
-        <el-col :span="8">
-          <el-card>
-            <el-statistic title="监测点总数" :value="15">
-              <template #prefix>
-                <el-icon style="vertical-align: middle">
-                  <Location />
-                </el-icon>
-              </template>
-            </el-statistic>
-          </el-card>
-        </el-col>
-        <el-col :span="8">
-          <el-card>
-            <el-statistic title="告警数量" :value="3">
-              <template #prefix>
-                <el-icon style="vertical-align: middle; color: #f56c6c">
-                  <Warning />
-                </el-icon>
-              </template>
-            </el-statistic>
-          </el-card>
-        </el-col>
-        <el-col :span="8">
-          <el-card>
-            <el-statistic title="设备在线" :value="8">
-              <template #prefix>
-                <el-icon style="vertical-align: middle; color: #67c23a">
-                  <Monitor />
-                </el-icon>
-              </template>
-            </el-statistic>
-          </el-card>
-        </el-col>
-      </el-row>
-
-      <el-alert
-        title="登录跳转成功！"
-        type="success"
-        description="您已成功登录并跳转到三维监测主界面。完整的Cesium 3D功能正在开发中..."
-        style="margin-top: 20px"
-        :closable="false"
-      />
+        <el-card style="margin-top: 10px;">
+          <template #header>
+            <span>实时数据</span>
+          </template>
+          <div class="data-content">
+            <p>监测点数: {{ monitoringPoints }}</p>
+            <p>告警数: {{ alarmCount }}</p>
+          </div>
+        </el-card>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import { useRouter } from 'vue-router';
-import { Location, Warning, Monitor } from '@element-plus/icons-vue';
-import { ElMessage } from 'element-plus';
+import { ref, onMounted, onUnmounted } from 'vue'
+import { ElMessage } from 'element-plus'
 
-const router = useRouter();
-const loginTime = ref(new Date().toLocaleString());
+const cesiumContainer = ref<HTMLElement>()
+const monitoringPoints = ref(0)
+const alarmCount = ref(0)
 
-const handleLogout = () => {
-  localStorage.removeItem('token');
-  ElMessage.success('已退出登录');
-  router.push('/login');
-};
+let cesiumViewer: any = null
 
-const goToDashboard = () => {
-  router.push('/dashboard');
-};
+onMounted(() => {
+  initCesium()
+  loadMonitoringData()
+})
+
+onUnmounted(() => {
+  if (cesiumViewer) {
+    cesiumViewer.destroy()
+  }
+})
+
+const initCesium = () => {
+  try {
+    // Cesium 初始化逻辑
+    // 注意：需要在 public 目录配置 Cesium 资源
+    console.log('Cesium 初始化')
+    ElMessage.info('三维场景加载中...')
+  } catch (error) {
+    console.error('Cesium 初始化失败:', error)
+    ElMessage.error('三维场景初始化失败')
+  }
+}
+
+const loadMonitoringData = async () => {
+  try {
+    // 加载监测数据
+    monitoringPoints.value = 0
+    alarmCount.value = 0
+  } catch (error) {
+    console.error('数据加载失败:', error)
+  }
+}
+
+const handleResetView = () => {
+  if (cesiumViewer) {
+    // 重置视角逻辑
+    ElMessage.success('视角已重置')
+  }
+}
+
+const handleToggleFullscreen = () => {
+  if (!document.fullscreenElement) {
+    cesiumContainer.value?.requestFullscreen()
+  } else {
+    document.exitFullscreen()
+  }
+}
 </script>
 
 <style scoped>
-.monitoring-3d-simple {
-  width: 100%;
-  min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 40px;
-}
-
-.header {
-  text-align: center;
-  color: white;
-  margin-bottom: 40px;
-}
-
-.header h1 {
-  font-size: 32px;
-  margin-bottom: 16px;
-}
-
-.header p {
-  font-size: 18px;
-  margin-bottom: 24px;
-}
-
-.header .el-button {
-  margin: 0 8px;
-}
-
-.content {
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.card-header {
+.monitoring-3d {
+  height: 100%;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+}
+
+.page-header {
+  padding: 20px;
+  background: #fff;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.page-header h2 {
+  margin: 0 0 8px 0;
+  font-size: 20px;
+  font-weight: 500;
+}
+
+.page-header p {
+  margin: 0;
+  color: #666;
+  font-size: 14px;
+}
+
+.monitoring-container {
+  flex: 1;
+  display: flex;
+  position: relative;
+  overflow: hidden;
+}
+
+.cesium-container {
+  flex: 1;
+  position: relative;
+  background: #000;
+}
+
+.cesium-viewer {
+  width: 100%;
+  height: 100%;
+}
+
+.control-panel {
+  width: 300px;
+  padding: 20px;
+  background: #f5f5f5;
+  overflow-y: auto;
+}
+
+.control-content,
+.data-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.data-content p {
+  margin: 0;
+  padding: 8px 0;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.data-content p:last-child {
+  border-bottom: none;
 }
 </style>
+

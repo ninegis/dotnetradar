@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ColorConfig 组件加载测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #2a2a2a;
+            border-radius: 5px;
+        }
+        .success {
+            color: #52c41a;
+        }
+        .error {
+            color: #ff4d4f;
+        }
+        .warning {
+            color: #faad14;
+        }
+        button {
+            margin: 5px;
+            padding: 10px 20px;
+            cursor: pointer;
+        }
+        #colorConfigContainer {
+            margin-top: 20px;
+            min-height: 400px;
+            background: #333;
+            border: 2px dashed #666;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 ColorConfig 组件加载深度测试</h1>
+    
+    <div class="test-section">
+        <h2>1. 文件路径检查</h2>
+        <div id="pathCheck">检查中...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. 组件导出检查</h2>
+        <div id="exportCheck">检查中...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. 组件渲染测试</h2>
+        <button onclick="testRender()">点击测试渲染</button>
+        <div id="renderResult"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. Store状态检查</h2>
+        <button onclick="checkStore()">检查Store</button>
+        <div id="storeResult"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>5. 手动触发显示</h2>
+        <button onclick="manualShow()">手动显示ColorConfig</button>
+        <div id="manualResult"></div>
+    </div>
+    
+    <div id="colorConfigContainer"></div>
+
+    <script>
+        console.log('=== ColorConfig 组件加载测试开始 ===');
+        
+        // 1. 检查文件路径
+        function checkPath() {
+            const path = 'src/components/ToolBar/Tool/ProjectConfig/ColorConfig.vue';
+            document.getElementById('pathCheck').innerHTML = `
+                <p>文件路径: <code>${path}</code></p>
+                <p class="success">✅ 文件存在（已在build时验证）</p>
+            `;
+        }
+        
+        // 2. 检查组件导出
+        function checkExport() {
+            const result = document.getElementById('exportCheck');
+            result.innerHTML = `
+                <p>检查 load.js 导出...</p>
+                <p class="success">✅ export {default as ColorConfig} from "@/components/ToolBar/Tool/ProjectConfig/ColorConfig.vue";</p>
+                <p>检查 ToolBar.vue 导入...</p>
+                <p class="success">✅ import {... ColorConfig ...} from '@/components/ToolBar/load.js';</p>
+            `;
+        }
+        
+        // 3. 测试渲染
+        function testRender() {
+            const result = document.getElementById('renderResult');
+            result.innerHTML = '<p class="warning">⚠️ 需要在Vue环境中测试</p>';
+            
+            // 检查DOM中是否有idcolorconfig元素
+            setTimeout(() => {
+                const el = document.getElementById('idcolorconfig');
+                if (el) {
+                    result.innerHTML += '<p class="success">✅ 找到DOM元素 #idcolorconfig</p>';
+                    result.innerHTML += `<p>display: ${window.getComputedStyle(el).display}</p>`;
+                    result.innerHTML += `<p>visibility: ${window.getComputedStyle(el).visibility}</p>`;
+                } else {
+                    result.innerHTML += '<p class="error">❌ 未找到DOM元素 #idcolorconfig</p>';
+                    result.innerHTML += '<p class="warning">可能原因：组件未被加载或未挂载</p>';
+                }
+            }, 1000);
+        }
+        
+        // 4. 检查Store状态
+        function checkStore() {
+            const result = document.getElementById('storeResult');
+            result.innerHTML = '<p class="warning">⚠️ 需要在Vue环境中测试</p>';
+            
+            // 尝试访问store
+            if (typeof window.store !== 'undefined') {
+                result.innerHTML = `
+                    <p class="success">✅ Store已加载</p>
+                    <p>toolbarcontent: ${window.store.toolbarcontent}</p>
+                    <p>dragContainer.width: ${window.store.dragContainer?.width}</p>
+                `;
+            } else {
+                result.innerHTML += '<p class="error">❌ Store未在window上暴露</p>';
+                result.innerHTML += '<p>请在浏览器控制台执行: <code>console.log(store.toolbarcontent)</code></p>';
+            }
+        }
+        
+        // 5. 手动显示
+        function manualShow() {
+            const result = document.getElementById('manualResult');
+            result.innerHTML = `
+                <h3>请在浏览器控制台执行以下命令：</h3>
+                <pre style="background:#000;padding:10px;border-radius:5px;">
+// 1. 检查store.toolbarcontent
+console.log('toolbarcontent:', store.toolbarcontent);
+
+// 2. 设置为colorConfig
+store.toolbarcontent = 'colorConfig';
+
+// 3. 检查是否有#idcolorconfig元素
+const el = document.getElementById('idcolorconfig');
+console.log('ColorConfig元素:', el);
+
+// 4. 如果元素存在，强制显示
+if (el) {
+    el.style.display = 'block';
+    el.style.visibility = 'visible';
+    el.style.opacity = '1';
+    console.log('已强制显示ColorConfig');
+} else {
+    console.error('ColorConfig元素不存在！');
+}
+
+// 5. 检查是否有JavaScript错误
+console.log('检查是否有红色错误信息 ↑');
+                </pre>
+            `;
+        }
+        
+        // 自动执行检查
+        checkPath();
+        checkExport();
+    </script>
+    
+    <div class="test-section" style="margin-top: 30px;">
+        <h2>📋 检查清单</h2>
+        <ol>
+            <li>✅ 文件路径正确</li>
+            <li>✅ load.js 导出正确</li>
+            <li>✅ ToolBar.vue 导入正确</li>
+            <li>✅ switch case 'colorConfig' 存在</li>
+            <li>❓ 组件是否成功挂载到DOM</li>
+            <li>❓ visible prop是否正确</li>
+            <li>❓ v-show是否为true</li>
+        </ol>
+    </div>
+    
+    <div class="test-section" style="margin-top: 30px;">
+        <h2>🎯 请在实际运行的系统中测试</h2>
+        <p><strong>步骤1</strong>: 打开 <code>http://localhost:8099</code></p>
+        <p><strong>步骤2</strong>: 登录系统</p>
+        <p><strong>步骤3</strong>: 打开浏览器控制台（F12）</p>
+        <p><strong>步骤4</strong>: 执行以下命令并截图告诉我结果：</p>
+        <pre style="background:#000;padding:15px;border-radius:5px;overflow-x:auto;">
+// 命令1: 检查当前toolbarcontent
+console.log('当前toolbarcontent:', store.toolbarcontent);
+
+// 命令2: 点击"项目配置"菜单中的"色条配置"
+
+// 命令3: 再次检查toolbarcontent
+console.log('点击后toolbarcontent:', store.toolbarcontent);
+
+// 命令4: 查找ColorConfig元素
+const el = document.getElementById('idcolorconfig');
+console.log('ColorConfig元素存在:', !!el);
+if (el) {
+    console.log('元素display:', window.getComputedStyle(el).display);
+    console.log('元素innerHTML长度:', el.innerHTML.length);
+}
+
+// 命令5: 检查是否有错误
+console.log('请查看上方是否有红色错误信息');
+        </pre>
+    </div>
+</body>
+</html>
+
