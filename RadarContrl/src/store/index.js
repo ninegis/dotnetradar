@@ -30,7 +30,7 @@ export const useMapStore = defineStore("sloperadarControl", {
                     username: null,
                     projectCode: null,
                     shortName: null,
-                    language: 0,
+                    language: "0",  // ✅ 修复：默认中文，使用字符串
                     i18Title: null,
                     i18Sign: null
                 }

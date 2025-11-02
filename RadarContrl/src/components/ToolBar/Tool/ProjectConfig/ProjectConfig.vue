@@ -241,7 +241,7 @@ const setCamera=()=>{
   })
 }
 /*-- events --*/
-onMounted(() => {
+onMounted(async () => {
   if (window.config){
     store.radarInfo.projectConfig['name'] = config['projectName'];
     store.radarInfo.projectConfig['description'] = config['projectDesc'];
@@ -249,7 +249,63 @@ onMounted(() => {
     store.radarInfo.projectConfig['phone'] = config['projectPhone'];
     store.radarInfo.projectConfig['email'] = config['projectEmail'];
   }
-  // console.log('ProjectConfig.onMounted');
+  
+  // ✅ 修复：自动加载当前项目的设备列表
+  if (store.projectInfo.projectSelected) {
+    try {
+      const res = await ApiRadar.getDevicesByProjectId(store.projectInfo.projectSelected);
+      console.log('ProjectConfig加载设备:', res);
+      
+      if (res.data && res.data.code === 200 && res.data.data) {
+        const projectIndex = store.projectInfo.projectData.findIndex(
+          p => p.projectId === store.projectInfo.projectSelected
+        );
+        
+        if (projectIndex !== -1) {
+          // 映射设备数据
+          store.projectInfo.projectData[projectIndex].devices = res.data.data.map(d => {
+            let deviceTypeStr = 'ER';
+            
+            if (d.deviceTypeCode) {
+              switch (d.deviceTypeCode) {
+                case 1: deviceTypeStr = 'ER'; break;
+                case 2: deviceTypeStr = 'MIMOLITE'; break;
+                case 5: deviceTypeStr = 'ER'; break;
+                case 6: deviceTypeStr = 'ER'; break;
+                case 7: deviceTypeStr = 'MIMOLITE'; break;
+                case 8: deviceTypeStr = 'MIMOLITE'; break;
+                default: deviceTypeStr = 'ER'; break;
+              }
+            }
+            
+            return {
+              deviceId: d.deviceId,
+              deviceName: d.deviceName,
+              id: d.deviceId,
+              name: d.deviceName,
+              type: deviceTypeStr,
+              status: d.status,
+              coordinates: [d.longitude || 0, d.latitude || 0, d.elevation || 0],
+              longitude: d.longitude || 0,
+              latitude: d.latitude || 0,
+              elevation: d.elevation || 0,
+              factoryId: d.factoryId || '',
+              orientation: d.orientation || 0,
+              ipAddress: d.ipAddress,
+              port: d.port,
+              params: d.params || {},
+              dataVersion: d.dataVersion || '0',
+              algorithmParam: d.algorithmParam || {}
+            };
+          });
+          
+          console.log('ProjectConfig设备列表已更新:', store.projectInfo.projectData[projectIndex].devices);
+        }
+      }
+    } catch (error) {
+      console.error('ProjectConfig加载设备失败:', error);
+    }
+  }
 });
 </script>
 
