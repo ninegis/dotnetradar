@@ -200,37 +200,113 @@ const deleteProject = ()=>{
         showMessage(t('common.operateCancel'),'info');
       })
 }
-const commitUpdate = ()=>{
+const commitUpdate = async ()=>{
   if (!currentProjectInfo.value.projectName) {
     showMessage('项目名称不能为空', 'warning');
     return;
   }
   
-  // ✅ 使用新的字段结构提交
-  ApiRadar.UpdateProject(currentProjectInfo.value.projectId, {
-    projectName: currentProjectInfo.value.projectName,
-    projectDescribe: currentProjectInfo.value.description,
-    contact: currentProjectInfo.value.contactPerson,
-    phone: currentProjectInfo.value.contactPhone,
-    email: currentProjectInfo.value.contactEmail,
-    lon: currentProjectInfo.value.longitude,
-    lat: currentProjectInfo.value.latitude,
-    alt: currentProjectInfo.value.elevation
-  }).then(res=>{
+  try {
+    // ✅ 使用新的字段结构提交
+    const res = await ApiRadar.UpdateProject(currentProjectInfo.value.projectId, {
+      projectName: currentProjectInfo.value.projectName,
+      projectDescribe: currentProjectInfo.value.description,
+      contact: currentProjectInfo.value.contactPerson,
+      phone: currentProjectInfo.value.contactPhone,
+      email: currentProjectInfo.value.contactEmail,
+      lon: currentProjectInfo.value.longitude,
+      lat: currentProjectInfo.value.latitude,
+      alt: currentProjectInfo.value.elevation
+    });
+    
     if (res.data.code === 200){
       showMessage(t('common.operateSuccess'));
       ApiRadar.AddRadarLog("修改项目信息"+currentProjectInfo.value.projectName, store.sysinfo.config.username, store.sysinfo.address, store.sysinfo.config.projectCode, store.sysinfo.config.shortName).then();
-      ApiRadar.getRadarData().then(res => {
-        store.projectInfo.projectData = res.data.data;
-        staticDataBind();
-      })
-    }else{
+      
+      // ✅ 重新加载项目数据
+      const projectRes = await ApiRadar.getRadarData();
+      if (projectRes.data && projectRes.data.data) {
+        // ✅ 映射项目数据（与projectDataInit保持一致）
+        const projects = projectRes.data.data || [];
+        store.projectInfo.projectData = projects.map(p => ({
+          projectId: p.projectId,
+          projectName: p.projectName,
+          id: p.projectId,
+          name: p.projectName,
+          description: p.description,
+          contact: p.contactPerson,
+          phone: p.contactPhone,
+          email: p.contactEmail,
+          contactPerson: p.contactPerson,
+          contactPhone: p.contactPhone,
+          contactEmail: p.contactEmail,
+          longitude: p.longitude,
+          latitude: p.latitude,
+          elevation: p.elevation,
+          devices: p.devices || [] // 初始化devices数组
+        }));
+        
+        // ✅ 重新加载当前项目的设备信息
+        const currentProjectId = currentProjectInfo.value.projectId;
+        const devRes = await ApiRadar.getDevicesByProjectId(currentProjectId);
+        
+        if (devRes.data && devRes.data.code === 200 && devRes.data.data) {
+          const projectIndex = store.projectInfo.projectData.findIndex(
+            p => p.projectId === currentProjectId
+          );
+          
+          if (projectIndex !== -1) {
+            // ✅ 映射设备数据（与其他地方保持一致）
+            store.projectInfo.projectData[projectIndex].devices = devRes.data.data.map(d => {
+              let deviceTypeStr = 'ER';
+              
+              if (d.deviceTypeCode) {
+                switch (d.deviceTypeCode) {
+                  case 1: deviceTypeStr = 'ER'; break;
+                  case 2: deviceTypeStr = 'MIMOLITE'; break;
+                  case 5: deviceTypeStr = 'ER'; break;
+                  case 6: deviceTypeStr = 'ER'; break;
+                  case 7: deviceTypeStr = 'MIMOLITE'; break;
+                  case 8: deviceTypeStr = 'MIMOLITE'; break;
+                  default: deviceTypeStr = 'ER'; break;
+                }
+              }
+              
+              return {
+                deviceId: d.deviceId,
+                deviceName: d.deviceName,
+                id: d.deviceId,
+                name: d.deviceName,
+                type: deviceTypeStr,
+                status: d.status,
+                coordinates: [d.longitude || 0, d.latitude || 0, d.elevation || 0],
+                longitude: d.longitude || 0,
+                latitude: d.latitude || 0,
+                elevation: d.elevation || 0,
+                factoryId: d.factoryId || '',
+                orientation: d.orientation || 0,
+                ipAddress: d.ipAddress,
+                port: d.port,
+                params: d.params || {},
+                dataVersion: (d.params && d.params.dataVersion) ? String(d.params.dataVersion) : '0',
+                algorithmParam: d.algorithmParam || {}
+              };
+            });
+            
+            console.log('ProjectConfig保存后设备列表已更新:', store.projectInfo.projectData[projectIndex].devices);
+          }
+        }
+      }
+      
+      // ✅ 重新绑定数据
+      staticDataBind();
+    } else {
       showMessage(res.data.message || t('common.operateFailed'),'error');
     }
-  }).catch(error => {
+  } catch (error) {
     console.error('更新项目失败:', error);
     showMessage('更新项目失败: ' + (error.response?.data?.message || error.message), 'error');
-  })
+  }
 }
 const setCamera=()=>{
   const params = CesiumUtils.GetCameraParams();
@@ -294,7 +370,7 @@ onMounted(async () => {
               ipAddress: d.ipAddress,
               port: d.port,
               params: d.params || {},
-              dataVersion: d.dataVersion || '0',
+              dataVersion: (d.params && d.params.dataVersion) ? String(d.params.dataVersion) : '0',
               algorithmParam: d.algorithmParam || {}
             };
           });

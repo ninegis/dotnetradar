@@ -154,23 +154,23 @@ namespace RadarSystem.WebAPI.Controllers
     /// </summary>
     public class ConfigInfo
     {
-        public string SystemName { get; set; }
-        public string Version { get; set; }
-        public string Environment { get; set; }
-        public string DatabaseType { get; set; }
-        public string DatabasePath { get; set; }
+        public string SystemName { get; set; } = string.Empty;
+        public string Version { get; set; } = string.Empty;
+        public string Environment { get; set; } = string.Empty;
+        public string DatabaseType { get; set; } = string.Empty;
+        public string DatabasePath { get; set; } = string.Empty;
         public int DiskSpaceThreshold { get; set; }
         public int DiskSpaceThresholdGB { get; set; }
-        public string MqttBrokerHost { get; set; }
+        public string MqttBrokerHost { get; set; } = string.Empty;
         public int MqttBrokerPort { get; set; }
-        public string TDengineHost { get; set; }
+        public string TDengineHost { get; set; } = string.Empty;
         public int TDenginePort { get; set; }
         public long MaxUploadFileSize { get; set; }
         public int DataRetentionDays { get; set; }
-        public string ApiBaseUrl { get; set; }
+        public string ApiBaseUrl { get; set; } = string.Empty;
         public bool SwaggerEnabled { get; set; }
         public DateTime ServerTime { get; set; }
-        public string ServerTimeZone { get; set; }
+        public string ServerTimeZone { get; set; } = string.Empty;
     }
 
     /// <summary>

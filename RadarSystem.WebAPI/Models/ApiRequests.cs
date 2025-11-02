@@ -253,72 +253,171 @@ namespace RadarSystem.WebAPI.Models
         [Required]
         public string DeviceId { get; set; } = string.Empty;
         
-        // ========== 通用算法参数 ==========
-        /// <summary>
-        /// 灵敏度系数 (1-9)
-        /// </summary>
-        public int? SensCoef { get; set; }
-        
-        /// <summary>
-        /// 形变图像抽取倍数
-        /// </summary>
-        public string? DefoImageDec { get; set; }
-        
-        /// <summary>
-        /// 散射图像抽取倍数
-        /// </summary>
-        public string? ScatImageDec { get; set; }
-        
-        /// <summary>
-        /// 大气相位误差估计功能开关 (0=距离模式, 1=临近模式, 2=高程模式)
-        /// </summary>
-        public string? AtmPhaErrEstFuncSwitch { get; set; }
-        
-        // ========== MIMO Lite 专有参数 ==========
-        /// <summary>
-        /// 滤波类型 (0=启用, 1=关闭)
-        /// </summary>
-        public int? FilterType { get; set; }
-        
-        /// <summary>
-        /// Alpha滤波参数 (1-3)
-        /// </summary>
-        public int? AlphaFilter { get; set; }
-        
-        /// <summary>
-        /// Beta滤波参数 (2-10)
-        /// </summary>
-        public int? BetaFilter { get; set; }
-        
-        /// <summary>
-        /// 去噪阈值 (0-100)
-        /// </summary>
-        public int? DeNoiseThread { get; set; }
-        
-        /// <summary>
-        /// 窗口相干 (1-5)
-        /// </summary>
-        public int? WinCoheren { get; set; }
-        
-        /// <summary>
-        /// 滤波宽度 (1-5)
-        /// </summary>
-        public int? FilterWidth { get; set; }
-        
-        /// <summary>
-        /// 监测模式 (0=Z, 1=B, 2=S)
-        /// </summary>
-        public string? MonitorMode { get; set; }
-        
-        /// <summary>
-        /// 设备IP地址
-        /// </summary>
-        public string? Ipv4 { get; set; }
-        
         /// <summary>
         /// Slave ID（MIMO Lite专用）
         /// </summary>
         public string? SlaveId { get; set; }
+        
+        // ========== 算法参数（32个字段） ==========
+        /// <summary>
+        /// 监测模式 (Z/B/S)
+        /// </summary>
+        public string? MonMode { get; set; }
+        
+        /// <summary>
+        /// 相位滤波类型选择控制变量 (0/1)
+        /// </summary>
+        public int? PhaFltTypeCtrl { get; set; }
+        
+        /// <summary>
+        /// 滤波半窗长
+        /// </summary>
+        public int? FltHalfWinLen { get; set; }
+        
+        /// <summary>
+        /// 大气滤波使能
+        /// </summary>
+        public double? AtmFltEn { get; set; }
+        
+        /// <summary>
+        /// 均值加权
+        /// </summary>
+        public double? MeanWgt { get; set; }
+        
+        /// <summary>
+        /// 压缩形变阈值
+        /// </summary>
+        public int? CmpDefThr { get; set; }
+        
+        /// <summary>
+        /// 压缩倍数
+        /// </summary>
+        public int? CmpMult { get; set; }
+        
+        /// <summary>
+        /// 幅度检测门限
+        /// </summary>
+        public double? AmpDetThr { get; set; }
+        
+        /// <summary>
+        /// 大气滤波参数 A
+        /// </summary>
+        public double? AtmFltParaA { get; set; }
+        
+        /// <summary>
+        /// 大气滤波参数 B
+        /// </summary>
+        public double? AtmFltParaB { get; set; }
+        
+        /// <summary>
+        /// 第二阶段大气校正门限 1
+        /// </summary>
+        public double? AtmCorrThr2nd_1 { get; set; }
+        
+        /// <summary>
+        /// 二次大气补偿更新周期
+        /// </summary>
+        public double? AtmCompUpdPer { get; set; }
+        
+        /// <summary>
+        /// 第二阶段大气校正门限 2
+        /// </summary>
+        public double? AtmCorrThr2nd_2 { get; set; }
+        
+        /// <summary>
+        /// 形变图像抽帧
+        /// </summary>
+        public string? DefImgDecim { get; set; }
+        
+        /// <summary>
+        /// 复数图图像抽帧
+        /// </summary>
+        public string? CplxImgDecim { get; set; }
+        
+        /// <summary>
+        /// 大气校正算法
+        /// </summary>
+        public string? AtmCorrAlg { get; set; }
+        
+        /// <summary>
+        /// 大气相位误差估计距离 1
+        /// </summary>
+        public double? AtmPhaErrEstDist_1 { get; set; }
+        
+        /// <summary>
+        /// 大气相位误差估计距离 2
+        /// </summary>
+        public double? AtmPhaErrEstDist_2 { get; set; }
+        
+        /// <summary>
+        /// 标准差加权
+        /// </summary>
+        public double? StdDevWgt { get; set; }
+        
+        /// <summary>
+        /// 短时形变量积参数
+        /// </summary>
+        public double? ShortDefAccPara { get; set; }
+        
+        /// <summary>
+        /// 去噪门限
+        /// </summary>
+        public int? DenoiseThr { get; set; }
+        
+        /// <summary>
+        /// 噪声均衡使能
+        /// </summary>
+        public double? IsNoiseEq { get; set; }
+        
+        /// <summary>
+        /// 噪声均衡类型
+        /// </summary>
+        public double? NoiseEqType { get; set; }
+        
+        /// <summary>
+        /// 幅度偏差选择门限初始值
+        /// </summary>
+        public double? AmpDevSelThrInit { get; set; }
+        
+        /// <summary>
+        /// 相干系数门限初始值
+        /// </summary>
+        public double? CohCoeThrInit { get; set; }
+        
+        /// <summary>
+        /// 有效PS点相关系数
+        /// </summary>
+        public double? CorrCoeffEffPSPts { get; set; }
+        
+        /// <summary>
+        /// 有效PS点数
+        /// </summary>
+        public double? EffPSPts { get; set; }
+        
+        /// <summary>
+        /// 干涉相位残差门限
+        /// </summary>
+        public double? IfgPhaResThr { get; set; }
+        
+        /// <summary>
+        /// 单点门限
+        /// </summary>
+        public double? SingPntThr { get; set; }
+        
+        /// <summary>
+        /// PS点灵敏度
+        /// </summary>
+        public int? PSPntSens { get; set; }
+        
+        /// <summary>
+        /// PS门限调整系数
+        /// </summary>
+        public double? PSThrAdjCoeff { get; set; }
+        
+        /// <summary>
+        /// 相干半窗长
+        /// </summary>
+        public int? CohHalfWinLen { get; set; }
         
         /// <summary>
         /// 指令编号（用于MQTT发布）

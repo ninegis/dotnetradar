@@ -1,0 +1,114 @@
+================================================================================
+目录说明 - Cursor Worktrees vs 正式代码目录
+================================================================================
+
+问题:
+--------------------------------------------------------------------------------
+为什么会有 C:\Users\Administrator\.cursor\worktrees\dotnetradar\hIWAE 目录？
+
+解答:
+--------------------------------------------------------------------------------
+Cursor编辑器使用"worktrees"（工作树）机制来管理代码：
+
+1. 工作树目录（临时工作区）:
+   C:\Users\Administrator\.cursor\worktrees\dotnetradar\hIWAE
+   
+   - 这是Cursor编辑器的临时工作目录
+   - 用于代码编辑和修改
+   - 不是实际的代码仓库
+
+2. 正式代码目录:
+   C:\kotradar2025\dotnetradar
+   
+   - 这是实际的项目代码目录
+   - 所有代码修改会自动同步到这里
+   - 运行服务和构建都应该在这个目录
+
+代码修改同步:
+================================================================================
+✅ 自动同步的内容（代码文件）:
+   - .cs 文件（C#源代码）
+   - .vue 文件（Vue组件）
+   - .csproj 文件（项目文件）
+   - 所有源代码修改
+
+❌ 不会自动同步的内容（新创建的文件）:
+   - 新创建的 .bat 文件
+   - 新创建的 .ps1 文件
+   - 新创建的 .md 文档
+   - 临时生成的文件
+
+已完成的代码修改（已自动同步到正式目录）:
+================================================================================
+✅ RadarSystem.Data/Models/CommandRecordEntity.cs
+   - AlgorithmConfigEntity类使用新32字段
+
+✅ RadarSystem.WebAPI/Program.cs
+   - 数据库表创建SQL（32字段）
+   - 字段自动添加逻辑
+
+✅ RadarSystem.WebAPI/Models/ApiRequests.cs
+   - UpdateAlgorithmParamRequest使用32字段
+
+✅ RadarSystem.WebAPI/Controllers/ProtocolController.cs
+   - 保存和获取接口使用32字段
+
+✅ RadarSystem.WebAPI/Controllers/DeviceController.cs
+   - 创建设备时自动创建算法配置
+
+✅ RadarContrl/src/components/ToolBar/Tool/RadarParams/AlgorithmParams.vue
+   - 前端表单使用32字段
+   - 保存和获取逻辑使用32字段
+
+已在正式目录创建的辅助文件:
+================================================================================
+✅ C:\kotradar2025\dotnetradar\简化创建算法配置表.bat
+   - 用于重建算法配置表
+
+✅ C:\kotradar2025\dotnetradar\重建算法配置表.ps1
+   - PowerShell版本的重建脚本
+
+正确的操作流程:
+================================================================================
+1. 使用Cursor编辑器修改代码
+   → 代码会自动同步到 C:\kotradar2025\dotnetradar
+
+2. 在正式目录运行服务:
+   cd C:\kotradar2025\dotnetradar\RadarSystem.WebAPI
+   dotnet run
+
+3. 执行bat脚本:
+   cd C:\kotradar2025\dotnetradar
+   .\简化创建算法配置表.bat
+
+4. 构建前端:
+   cd C:\kotradar2025\dotnetradar\RadarContrl
+   npm run build
+
+重建算法配置表的正确方法:
+================================================================================
+在正式代码目录执行:
+
+方法1 - 使用bat脚本（推荐）:
+   cd C:\kotradar2025\dotnetradar
+   .\简化创建算法配置表.bat
+
+方法2 - 手动执行:
+   set REBUILD_ALGORITHM_TABLE=1
+   cd C:\kotradar2025\dotnetradar\RadarSystem.WebAPI
+   dotnet run
+
+查看日志验证:
+   C:\kotradar2025\dotnetradar\RadarSystem.WebAPI\logs\radar-api-*.txt
+
+总结:
+================================================================================
+✅ 所有代码修改已同步到正式目录 C:\kotradar2025\dotnetradar
+✅ 重建表的bat文件已在正式目录创建
+✅ 可以直接在正式目录运行所有脚本和服务
+
+请在正式目录 C:\kotradar2025\dotnetradar 中操作！
+
+
+
+

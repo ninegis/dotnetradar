@@ -155,20 +155,8 @@ export const useMapStore = defineStore("sloperadarControl", {
                         break;
                     }
                     case '/dev/radar/defo/nAlgorithmParam': {
-                        const keys = Object.keys(obj);
-                        this.radarInfo.algorithmParam['FilterType'] = parseInt(this.radarInfo.algorithmParam['FilterType']);
-                        this.radarInfo.algorithmParam['AlphaFilter'] = parseInt(this.radarInfo.algorithmParam['AlphaFilter']);
-                        this.radarInfo.algorithmParam['BetaFilter'] = parseInt(this.radarInfo.algorithmParam['BetaFilter']);
-                        this.radarInfo.algorithmParam['DeNoise_Thread'] = parseInt(this.radarInfo.algorithmParam['DeNoise_Thread']);
-                        this.radarInfo.algorithmParam['SensCoef'] = parseInt(this.radarInfo.algorithmParam['SensCoef']);
-                        this.radarInfo.algorithmParam['DefoImageDec'] = this.radarInfo.algorithmParam['DefoImageDec'];
-                        this.radarInfo.algorithmParam['BetaFilter'] = parseInt(this.radarInfo.algorithmParam['BetaFilter']);
-                        this.radarInfo.algorithmParam['Win_Coheren'] = parseInt(this.radarInfo.algorithmParam['Win_Coheren']);
-                        this.radarInfo.algorithmParam['AtmPhaErrEstFuncSwitch'] = this.radarInfo.algorithmParam['AtmPhaErrEstFuncSwitch'];
-                        this.radarInfo.algorithmParam['filter_width'] = parseInt(this.radarInfo.algorithmParam['filter_width']);
-                        this.radarInfo.algorithmParam['ScatImageDec'] = this.radarInfo.algorithmParam['ScatImageDec'];
-                        this.radarInfo.algorithmParam['ipv4'] = this.radarInfo.algorithmParam['ipv4'];
-                        this.radarInfo.algorithmParam['Monitor_Mode'] = this.radarInfo.algorithmParam['Monitor_Mode'];
+                        // ✅ 更新新32字段算法参数（如果需要从MQTT接收）
+                        // 注意：MQTT消息可能仍使用旧字段名，需要根据实际情况调整
                         this.paramLoading = false;
                         break;
                     }

@@ -37,9 +37,11 @@ export class ApiRadar {
     
     // ✅ 新增：获取算法参数
     static getAlgorithmParam(projectId, deviceId) {
-        return new Promise(resolve => {
-            axios.get(this.apiUrl + '/api/protocol/query/algorithm/' + projectId + '/' + deviceId).then(res => {
+        return new Promise((resolve, reject) => {
+            axios.get(this.apiUrl + '/api/protocol/algorithm/' + projectId + '/' + deviceId).then(res => {
                 resolve(res);
+            }).catch(err => {
+                reject(err);
             })
         })
     }

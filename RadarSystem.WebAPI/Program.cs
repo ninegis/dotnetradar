@@ -466,6 +466,17 @@ using (var scope = app.Services.CreateScope())
             var hasAlgorithmConfigsTable = reader.Read();
             reader.Close();
             
+            // 检查是否需要重建表（通过环境变量控制）
+            var rebuildTable = Environment.GetEnvironmentVariable("REBUILD_ALGORITHM_TABLE") == "1";
+            if (rebuildTable && hasAlgorithmConfigsTable)
+            {
+                Log.Information("检测到REBUILD_ALGORITHM_TABLE环境变量，正在重建表...");
+                command.CommandText = "ALTER TABLE algorithm_configs RENAME TO algorithm_configs_old;";
+                await command.ExecuteNonQueryAsync();
+                Log.Information("旧表已重命名为 algorithm_configs_old，将创建新表结构");
+                hasAlgorithmConfigsTable = false;
+            }
+            
             if (!hasAlgorithmConfigsTable)
             {
                 command.CommandText = @"
@@ -473,18 +484,39 @@ using (var scope = app.Services.CreateScope())
                         id TEXT PRIMARY KEY,
                         project_id TEXT NOT NULL,
                         device_id TEXT NOT NULL,
-                        filter_type INTEGER DEFAULT 0,
-                        alpha_filter INTEGER DEFAULT 0,
-                        beta_filter INTEGER DEFAULT 0,
-                        de_noise_thread INTEGER DEFAULT 0,
-                        sens_coef INTEGER DEFAULT 0,
-                        defo_image_dec TEXT DEFAULT '1',
-                        scat_image_dec TEXT DEFAULT '1',
-                        win_coheren INTEGER DEFAULT 0,
-                        atm_pha_err_est_func_switch TEXT DEFAULT '0',
-                        filter_width INTEGER DEFAULT 0,
-                        monitor_mode TEXT DEFAULT '0',
-                        ipv4 TEXT,
+                        -- 新32个算法参数字段
+                        mon_mode TEXT DEFAULT 'Z',
+                        pha_flt_type_ctrl INTEGER DEFAULT 0,
+                        flt_half_win_len INTEGER DEFAULT 1,
+                        atm_flt_en REAL DEFAULT 0.0,
+                        mean_wgt REAL DEFAULT 0.0,
+                        cmp_def_thr INTEGER DEFAULT 1,
+                        cmp_mult INTEGER DEFAULT 1,
+                        amp_det_thr REAL DEFAULT 0.0,
+                        atm_flt_para_a REAL DEFAULT 0.0,
+                        atm_flt_para_b REAL DEFAULT 0.0,
+                        atm_corr_thr_2nd_1 REAL DEFAULT 0.0,
+                        atm_comp_upd_per REAL DEFAULT 0.0,
+                        atm_corr_thr_2nd_2 REAL DEFAULT 0.0,
+                        def_img_decim TEXT DEFAULT '1',
+                        cplx_img_decim TEXT DEFAULT '1',
+                        atm_corr_alg TEXT DEFAULT '0',
+                        atm_pha_err_est_dist_1 REAL DEFAULT 0.0,
+                        atm_pha_err_est_dist_2 REAL DEFAULT 0.0,
+                        std_dev_wgt REAL DEFAULT 0.0,
+                        short_def_acc_para REAL DEFAULT 0.0,
+                        denoise_thr INTEGER DEFAULT 1,
+                        is_noise_eq REAL DEFAULT 0.0,
+                        noise_eq_type REAL DEFAULT 0.0,
+                        amp_dev_sel_thr_init REAL DEFAULT 0.1,
+                        coh_coe_thr_init REAL DEFAULT 0.01,
+                        corr_coeff_eff_ps_pts REAL DEFAULT 0.0,
+                        eff_ps_pts REAL DEFAULT 0.0,
+                        ifg_pha_res_thr REAL DEFAULT 0.0,
+                        sing_pnt_thr REAL DEFAULT 0.0,
+                        ps_pnt_sens INTEGER DEFAULT 1,
+                        ps_thr_adj_coeff REAL DEFAULT 0.0,
+                        coh_half_win_len INTEGER DEFAULT 1,
                         create_time TEXT NOT NULL,
                         update_time TEXT,
                         FOREIGN KEY (project_id) REFERENCES Projects(ProjectId) ON DELETE RESTRICT,
@@ -495,7 +527,156 @@ using (var scope = app.Services.CreateScope())
                     CREATE UNIQUE INDEX idx_algorithm_configs_project_device ON algorithm_configs(project_id, device_id);
                 ";
                 await command.ExecuteNonQueryAsync();
-                Log.Information("已创建表: algorithm_configs");
+                Log.Information("已创建表: algorithm_configs (新32字段版本)");
+                
+                // 输出字段列表用于验证
+                command.CommandText = "PRAGMA table_info(algorithm_configs);";
+                reader = await command.ExecuteReaderAsync();
+                var allColumns = new System.Collections.Generic.List<string>();
+                while (await reader.ReadAsync())
+                {
+                    allColumns.Add(reader.GetString(1));
+                }
+                reader.Close();
+                Log.Information($"algorithm_configs 表当前字段总数: {allColumns.Count}");
+                Log.Information($"字段列表: {string.Join(", ", allColumns)}");
+            }
+            else
+            {
+                // ✅ 检查并添加缺失字段
+                command.CommandText = "PRAGMA table_info(algorithm_configs);";
+                reader = await command.ExecuteReaderAsync();
+                var algorithmConfigColumns = new System.Collections.Generic.List<string>();
+                while (await reader.ReadAsync()) { algorithmConfigColumns.Add(reader.GetString(1)); }
+                reader.Close();
+
+                // 定义所有应该存在的字段（32个新字段 + 旧字段）
+                var columnsToAdd = new Dictionary<string, string>
+                {
+                    // 新32个算法参数字段
+                    {"mon_mode", "ALTER TABLE algorithm_configs ADD COLUMN mon_mode TEXT DEFAULT 'Z';"},
+                    {"pha_flt_type_ctrl", "ALTER TABLE algorithm_configs ADD COLUMN pha_flt_type_ctrl INTEGER DEFAULT 0;"},
+                    {"flt_half_win_len", "ALTER TABLE algorithm_configs ADD COLUMN flt_half_win_len INTEGER DEFAULT 1;"},
+                    {"atm_flt_en", "ALTER TABLE algorithm_configs ADD COLUMN atm_flt_en REAL DEFAULT 0.0;"},
+                    {"mean_wgt", "ALTER TABLE algorithm_configs ADD COLUMN mean_wgt REAL DEFAULT 0.0;"},
+                    {"cmp_def_thr", "ALTER TABLE algorithm_configs ADD COLUMN cmp_def_thr INTEGER DEFAULT 1;"},
+                    {"cmp_mult", "ALTER TABLE algorithm_configs ADD COLUMN cmp_mult INTEGER DEFAULT 1;"},
+                    {"amp_det_thr", "ALTER TABLE algorithm_configs ADD COLUMN amp_det_thr REAL DEFAULT 0.0;"},
+                    {"atm_flt_para_a", "ALTER TABLE algorithm_configs ADD COLUMN atm_flt_para_a REAL DEFAULT 0.0;"},
+                    {"atm_flt_para_b", "ALTER TABLE algorithm_configs ADD COLUMN atm_flt_para_b REAL DEFAULT 0.0;"},
+                    {"atm_corr_thr_2nd_1", "ALTER TABLE algorithm_configs ADD COLUMN atm_corr_thr_2nd_1 REAL DEFAULT 0.0;"},
+                    {"atm_comp_upd_per", "ALTER TABLE algorithm_configs ADD COLUMN atm_comp_upd_per REAL DEFAULT 0.0;"},
+                    {"atm_corr_thr_2nd_2", "ALTER TABLE algorithm_configs ADD COLUMN atm_corr_thr_2nd_2 REAL DEFAULT 0.0;"},
+                    {"def_img_decim", "ALTER TABLE algorithm_configs ADD COLUMN def_img_decim TEXT DEFAULT '1';"},
+                    {"cplx_img_decim", "ALTER TABLE algorithm_configs ADD COLUMN cplx_img_decim TEXT DEFAULT '1';"},
+                    {"atm_corr_alg", "ALTER TABLE algorithm_configs ADD COLUMN atm_corr_alg TEXT DEFAULT '0';"},
+                    {"atm_pha_err_est_dist_1", "ALTER TABLE algorithm_configs ADD COLUMN atm_pha_err_est_dist_1 REAL DEFAULT 0.0;"},
+                    {"atm_pha_err_est_dist_2", "ALTER TABLE algorithm_configs ADD COLUMN atm_pha_err_est_dist_2 REAL DEFAULT 0.0;"},
+                    {"std_dev_wgt", "ALTER TABLE algorithm_configs ADD COLUMN std_dev_wgt REAL DEFAULT 0.0;"},
+                    {"short_def_acc_para", "ALTER TABLE algorithm_configs ADD COLUMN short_def_acc_para REAL DEFAULT 0.0;"},
+                    {"denoise_thr", "ALTER TABLE algorithm_configs ADD COLUMN denoise_thr INTEGER DEFAULT 1;"},
+                    {"is_noise_eq", "ALTER TABLE algorithm_configs ADD COLUMN is_noise_eq REAL DEFAULT 0.0;"},
+                    {"noise_eq_type", "ALTER TABLE algorithm_configs ADD COLUMN noise_eq_type REAL DEFAULT 0.0;"},
+                    {"amp_dev_sel_thr_init", "ALTER TABLE algorithm_configs ADD COLUMN amp_dev_sel_thr_init REAL DEFAULT 0.1;"},
+                    {"coh_coe_thr_init", "ALTER TABLE algorithm_configs ADD COLUMN coh_coe_thr_init REAL DEFAULT 0.01;"},
+                    {"corr_coeff_eff_ps_pts", "ALTER TABLE algorithm_configs ADD COLUMN corr_coeff_eff_ps_pts REAL DEFAULT 0.0;"},
+                    {"eff_ps_pts", "ALTER TABLE algorithm_configs ADD COLUMN eff_ps_pts REAL DEFAULT 0.0;"},
+                    {"ifg_pha_res_thr", "ALTER TABLE algorithm_configs ADD COLUMN ifg_pha_res_thr REAL DEFAULT 0.0;"},
+                    {"sing_pnt_thr", "ALTER TABLE algorithm_configs ADD COLUMN sing_pnt_thr REAL DEFAULT 0.0;"},
+                    {"ps_pnt_sens", "ALTER TABLE algorithm_configs ADD COLUMN ps_pnt_sens INTEGER DEFAULT 1;"},
+                    {"ps_thr_adj_coeff", "ALTER TABLE algorithm_configs ADD COLUMN ps_thr_adj_coeff REAL DEFAULT 0.0;"},
+                    {"coh_half_win_len", "ALTER TABLE algorithm_configs ADD COLUMN coh_half_win_len INTEGER DEFAULT 1;"}
+                };
+
+                int addedCount = 0;
+                foreach (var col in columnsToAdd)
+                {
+                    if (!algorithmConfigColumns.Contains(col.Key))
+                    {
+                        command.CommandText = col.Value;
+                        await command.ExecuteNonQueryAsync();
+                        Log.Information($"已添加字段: algorithm_configs.{col.Key}");
+                        addedCount++;
+                    }
+                }
+
+                if (addedCount > 0)
+                {
+                    Log.Information($"✅ 算法配置表字段检查完成，共添加 {addedCount} 个缺失字段");
+                }
+                else
+                {
+                    Log.Information("✅ 算法配置表字段完整，无需添加");
+                }
+            }
+
+            // ========== 清理algorithm_configs_old表（只保留项目和设备信息及时间字段） ==========
+            command.CommandText = "SELECT name FROM sqlite_master WHERE type='table' AND name='algorithm_configs_old';";
+            reader = await command.ExecuteReaderAsync();
+            var hasOldTable = reader.Read();
+            reader.Close();
+            
+            if (hasOldTable)
+            {
+                Log.Information("检测到 algorithm_configs_old 表，正在清理（只保留项目和设备信息及时间字段）...");
+                
+                // 检查旧表是否有数据
+                command.CommandText = "SELECT COUNT(*) FROM algorithm_configs_old;";
+                var oldTableCount = Convert.ToInt32(await command.ExecuteScalarAsync());
+                Log.Information($"旧表中有 {oldTableCount} 条记录");
+                
+                if (oldTableCount > 0)
+                {
+                    // 创建临时表，只包含需要保留的字段
+                    command.CommandText = @"
+                        CREATE TABLE algorithm_configs_old_temp (
+                            id TEXT PRIMARY KEY,
+                            project_id TEXT NOT NULL,
+                            device_id TEXT NOT NULL,
+                            create_time TEXT NOT NULL,
+                            update_time TEXT
+                        );
+                    ";
+                    await command.ExecuteNonQueryAsync();
+                    Log.Information("已创建临时表 algorithm_configs_old_temp");
+                    
+                    // 复制数据（只复制需要的字段）
+                    command.CommandText = @"
+                        INSERT INTO algorithm_configs_old_temp (id, project_id, device_id, create_time, update_time)
+                        SELECT id, project_id, device_id, create_time, update_time
+                        FROM algorithm_configs_old;
+                    ";
+                    var copiedRows = await command.ExecuteNonQueryAsync();
+                    Log.Information($"已复制 {copiedRows} 条记录到临时表（只包含项目和设备信息及时间字段）");
+                    
+                    // 删除旧表
+                    command.CommandText = "DROP TABLE algorithm_configs_old;";
+                    await command.ExecuteNonQueryAsync();
+                    Log.Information("已删除旧表 algorithm_configs_old");
+                    
+                    // 重命名临时表
+                    command.CommandText = "ALTER TABLE algorithm_configs_old_temp RENAME TO algorithm_configs_old;";
+                    await command.ExecuteNonQueryAsync();
+                    Log.Information("✅ 已清理 algorithm_configs_old 表，只保留项目和设备信息及时间字段");
+                }
+                else
+                {
+                    // 如果没有数据，直接重建表结构
+                    command.CommandText = "DROP TABLE algorithm_configs_old;";
+                    await command.ExecuteNonQueryAsync();
+                    
+                    command.CommandText = @"
+                        CREATE TABLE algorithm_configs_old (
+                            id TEXT PRIMARY KEY,
+                            project_id TEXT NOT NULL,
+                            device_id TEXT NOT NULL,
+                            create_time TEXT NOT NULL,
+                            update_time TEXT
+                        );
+                    ";
+                    await command.ExecuteNonQueryAsync();
+                    Log.Information("✅ 已重建 algorithm_configs_old 表（空表，只包含项目和设备信息及时间字段）");
+                }
             }
 
             // ========== 创建speed_indices表 ==========

@@ -21,7 +21,7 @@ namespace RadarSystem.WebAPI.Controllers
 
         /// <summary>
         /// 添加允许人员
-        /// GET /api/server/addAllowPeople?name={name}&phone={phone}&project_code={project_code}
+        /// GET /api/server/addAllowPeople?name={name}&amp;phone={phone}&amp;project_code={project_code}
         /// </summary>
         [HttpGet("addAllowPeople")]
         public ApiResponse<object> AddAllowPeople(

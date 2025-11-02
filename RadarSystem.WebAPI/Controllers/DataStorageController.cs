@@ -108,7 +108,7 @@ namespace RadarSystem.WebAPI.Controllers
         /// <summary>
         /// 驱动器名称
         /// </summary>
-        public string DriveName { get; set; }
+        public string DriveName { get; set; } = string.Empty;
 
         /// <summary>
         /// 总大小（字节）

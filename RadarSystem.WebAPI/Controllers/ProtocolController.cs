@@ -578,17 +578,71 @@ namespace RadarSystem.WebAPI.Controllers
                     _dbContext.AlgorithmConfigs.Add(algorithmConfig);
                 }
 
-                // 更新通用算法参数
-                if (request.SensCoef.HasValue)
-                    algorithmConfig.SensCoef = request.SensCoef.Value;
-                if (!string.IsNullOrEmpty(request.DefoImageDec))
-                    algorithmConfig.DefoImageDec = request.DefoImageDec;
-                if (!string.IsNullOrEmpty(request.ScatImageDec))
-                    algorithmConfig.ScatImageDec = request.ScatImageDec;
-                if (!string.IsNullOrEmpty(request.AtmPhaErrEstFuncSwitch))
-                    algorithmConfig.AtmPhaErrEstFuncSwitch = request.AtmPhaErrEstFuncSwitch;
-                if (!string.IsNullOrEmpty(request.Ipv4))
-                    algorithmConfig.Ipv4 = request.Ipv4;
+                // ✅ 更新算法参数（32个字段）
+                if (!string.IsNullOrEmpty(request.MonMode))
+                    algorithmConfig.MonMode = request.MonMode;
+                if (request.PhaFltTypeCtrl.HasValue)
+                    algorithmConfig.PhaFltTypeCtrl = request.PhaFltTypeCtrl.Value;
+                if (request.FltHalfWinLen.HasValue)
+                    algorithmConfig.FltHalfWinLen = request.FltHalfWinLen.Value;
+                if (request.AtmFltEn.HasValue)
+                    algorithmConfig.AtmFltEn = request.AtmFltEn.Value;
+                if (request.MeanWgt.HasValue)
+                    algorithmConfig.MeanWgt = request.MeanWgt.Value;
+                if (request.CmpDefThr.HasValue)
+                    algorithmConfig.CmpDefThr = request.CmpDefThr.Value;
+                if (request.CmpMult.HasValue)
+                    algorithmConfig.CmpMult = request.CmpMult.Value;
+                if (request.AmpDetThr.HasValue)
+                    algorithmConfig.AmpDetThr = request.AmpDetThr.Value;
+                if (request.AtmFltParaA.HasValue)
+                    algorithmConfig.AtmFltParaA = request.AtmFltParaA.Value;
+                if (request.AtmFltParaB.HasValue)
+                    algorithmConfig.AtmFltParaB = request.AtmFltParaB.Value;
+                if (request.AtmCorrThr2nd_1.HasValue)
+                    algorithmConfig.AtmCorrThr2nd_1 = request.AtmCorrThr2nd_1.Value;
+                if (request.AtmCompUpdPer.HasValue)
+                    algorithmConfig.AtmCompUpdPer = request.AtmCompUpdPer.Value;
+                if (request.AtmCorrThr2nd_2.HasValue)
+                    algorithmConfig.AtmCorrThr2nd_2 = request.AtmCorrThr2nd_2.Value;
+                if (!string.IsNullOrEmpty(request.DefImgDecim))
+                    algorithmConfig.DefImgDecim = request.DefImgDecim;
+                if (!string.IsNullOrEmpty(request.CplxImgDecim))
+                    algorithmConfig.CplxImgDecim = request.CplxImgDecim;
+                if (!string.IsNullOrEmpty(request.AtmCorrAlg))
+                    algorithmConfig.AtmCorrAlg = request.AtmCorrAlg;
+                if (request.AtmPhaErrEstDist_1.HasValue)
+                    algorithmConfig.AtmPhaErrEstDist_1 = request.AtmPhaErrEstDist_1.Value;
+                if (request.AtmPhaErrEstDist_2.HasValue)
+                    algorithmConfig.AtmPhaErrEstDist_2 = request.AtmPhaErrEstDist_2.Value;
+                if (request.StdDevWgt.HasValue)
+                    algorithmConfig.StdDevWgt = request.StdDevWgt.Value;
+                if (request.ShortDefAccPara.HasValue)
+                    algorithmConfig.ShortDefAccPara = request.ShortDefAccPara.Value;
+                if (request.DenoiseThr.HasValue)
+                    algorithmConfig.DenoiseThr = request.DenoiseThr.Value;
+                if (request.IsNoiseEq.HasValue)
+                    algorithmConfig.IsNoiseEq = request.IsNoiseEq.Value;
+                if (request.NoiseEqType.HasValue)
+                    algorithmConfig.NoiseEqType = request.NoiseEqType.Value;
+                if (request.AmpDevSelThrInit.HasValue)
+                    algorithmConfig.AmpDevSelThrInit = request.AmpDevSelThrInit.Value;
+                if (request.CohCoeThrInit.HasValue)
+                    algorithmConfig.CohCoeThrInit = request.CohCoeThrInit.Value;
+                if (request.CorrCoeffEffPSPts.HasValue)
+                    algorithmConfig.CorrCoeffEffPSPts = request.CorrCoeffEffPSPts.Value;
+                if (request.EffPSPts.HasValue)
+                    algorithmConfig.EffPSPts = request.EffPSPts.Value;
+                if (request.IfgPhaResThr.HasValue)
+                    algorithmConfig.IfgPhaResThr = request.IfgPhaResThr.Value;
+                if (request.SingPntThr.HasValue)
+                    algorithmConfig.SingPntThr = request.SingPntThr.Value;
+                if (request.PSPntSens.HasValue)
+                    algorithmConfig.PSPntSens = request.PSPntSens.Value;
+                if (request.PSThrAdjCoeff.HasValue)
+                    algorithmConfig.PSThrAdjCoeff = request.PSThrAdjCoeff.Value;
+                if (request.CohHalfWinLen.HasValue)
+                    algorithmConfig.CohHalfWinLen = request.CohHalfWinLen.Value;
 
                 algorithmConfig.UpdateTime = DateTime.Now;
 
@@ -646,33 +700,71 @@ namespace RadarSystem.WebAPI.Controllers
                     _dbContext.AlgorithmConfigs.Add(algorithmConfig);
                 }
 
-                // 更新MIMO Lite专有参数
-                if (request.FilterType.HasValue)
-                    algorithmConfig.FilterType = request.FilterType.Value;
-                if (request.AlphaFilter.HasValue)
-                    algorithmConfig.AlphaFilter = request.AlphaFilter.Value;
-                if (request.BetaFilter.HasValue)
-                    algorithmConfig.BetaFilter = request.BetaFilter.Value;
-                if (request.DeNoiseThread.HasValue)
-                    algorithmConfig.DeNoiseThread = request.DeNoiseThread.Value;
-                if (request.WinCoheren.HasValue)
-                    algorithmConfig.WinCoheren = request.WinCoheren.Value;
-                if (request.FilterWidth.HasValue)
-                    algorithmConfig.FilterWidth = request.FilterWidth.Value;
-                if (!string.IsNullOrEmpty(request.MonitorMode))
-                    algorithmConfig.MonitorMode = request.MonitorMode;
-                
-                // 通用参数
-                if (request.SensCoef.HasValue)
-                    algorithmConfig.SensCoef = request.SensCoef.Value;
-                if (!string.IsNullOrEmpty(request.DefoImageDec))
-                    algorithmConfig.DefoImageDec = request.DefoImageDec;
-                if (!string.IsNullOrEmpty(request.ScatImageDec))
-                    algorithmConfig.ScatImageDec = request.ScatImageDec;
-                if (!string.IsNullOrEmpty(request.AtmPhaErrEstFuncSwitch))
-                    algorithmConfig.AtmPhaErrEstFuncSwitch = request.AtmPhaErrEstFuncSwitch;
-                if (!string.IsNullOrEmpty(request.Ipv4))
-                    algorithmConfig.Ipv4 = request.Ipv4;
+                // ✅ 更新算法参数（32个字段）
+                if (!string.IsNullOrEmpty(request.MonMode))
+                    algorithmConfig.MonMode = request.MonMode;
+                if (request.PhaFltTypeCtrl.HasValue)
+                    algorithmConfig.PhaFltTypeCtrl = request.PhaFltTypeCtrl.Value;
+                if (request.FltHalfWinLen.HasValue)
+                    algorithmConfig.FltHalfWinLen = request.FltHalfWinLen.Value;
+                if (request.AtmFltEn.HasValue)
+                    algorithmConfig.AtmFltEn = request.AtmFltEn.Value;
+                if (request.MeanWgt.HasValue)
+                    algorithmConfig.MeanWgt = request.MeanWgt.Value;
+                if (request.CmpDefThr.HasValue)
+                    algorithmConfig.CmpDefThr = request.CmpDefThr.Value;
+                if (request.CmpMult.HasValue)
+                    algorithmConfig.CmpMult = request.CmpMult.Value;
+                if (request.AmpDetThr.HasValue)
+                    algorithmConfig.AmpDetThr = request.AmpDetThr.Value;
+                if (request.AtmFltParaA.HasValue)
+                    algorithmConfig.AtmFltParaA = request.AtmFltParaA.Value;
+                if (request.AtmFltParaB.HasValue)
+                    algorithmConfig.AtmFltParaB = request.AtmFltParaB.Value;
+                if (request.AtmCorrThr2nd_1.HasValue)
+                    algorithmConfig.AtmCorrThr2nd_1 = request.AtmCorrThr2nd_1.Value;
+                if (request.AtmCompUpdPer.HasValue)
+                    algorithmConfig.AtmCompUpdPer = request.AtmCompUpdPer.Value;
+                if (request.AtmCorrThr2nd_2.HasValue)
+                    algorithmConfig.AtmCorrThr2nd_2 = request.AtmCorrThr2nd_2.Value;
+                if (!string.IsNullOrEmpty(request.DefImgDecim))
+                    algorithmConfig.DefImgDecim = request.DefImgDecim;
+                if (!string.IsNullOrEmpty(request.CplxImgDecim))
+                    algorithmConfig.CplxImgDecim = request.CplxImgDecim;
+                if (!string.IsNullOrEmpty(request.AtmCorrAlg))
+                    algorithmConfig.AtmCorrAlg = request.AtmCorrAlg;
+                if (request.AtmPhaErrEstDist_1.HasValue)
+                    algorithmConfig.AtmPhaErrEstDist_1 = request.AtmPhaErrEstDist_1.Value;
+                if (request.AtmPhaErrEstDist_2.HasValue)
+                    algorithmConfig.AtmPhaErrEstDist_2 = request.AtmPhaErrEstDist_2.Value;
+                if (request.StdDevWgt.HasValue)
+                    algorithmConfig.StdDevWgt = request.StdDevWgt.Value;
+                if (request.ShortDefAccPara.HasValue)
+                    algorithmConfig.ShortDefAccPara = request.ShortDefAccPara.Value;
+                if (request.DenoiseThr.HasValue)
+                    algorithmConfig.DenoiseThr = request.DenoiseThr.Value;
+                if (request.IsNoiseEq.HasValue)
+                    algorithmConfig.IsNoiseEq = request.IsNoiseEq.Value;
+                if (request.NoiseEqType.HasValue)
+                    algorithmConfig.NoiseEqType = request.NoiseEqType.Value;
+                if (request.AmpDevSelThrInit.HasValue)
+                    algorithmConfig.AmpDevSelThrInit = request.AmpDevSelThrInit.Value;
+                if (request.CohCoeThrInit.HasValue)
+                    algorithmConfig.CohCoeThrInit = request.CohCoeThrInit.Value;
+                if (request.CorrCoeffEffPSPts.HasValue)
+                    algorithmConfig.CorrCoeffEffPSPts = request.CorrCoeffEffPSPts.Value;
+                if (request.EffPSPts.HasValue)
+                    algorithmConfig.EffPSPts = request.EffPSPts.Value;
+                if (request.IfgPhaResThr.HasValue)
+                    algorithmConfig.IfgPhaResThr = request.IfgPhaResThr.Value;
+                if (request.SingPntThr.HasValue)
+                    algorithmConfig.SingPntThr = request.SingPntThr.Value;
+                if (request.PSPntSens.HasValue)
+                    algorithmConfig.PSPntSens = request.PSPntSens.Value;
+                if (request.PSThrAdjCoeff.HasValue)
+                    algorithmConfig.PSThrAdjCoeff = request.PSThrAdjCoeff.Value;
+                if (request.CohHalfWinLen.HasValue)
+                    algorithmConfig.CohHalfWinLen = request.CohHalfWinLen.Value;
 
                 algorithmConfig.UpdateTime = DateTime.Now;
 
@@ -726,21 +818,39 @@ namespace RadarSystem.WebAPI.Controllers
                     {
                         projectId = algorithmConfig.ProjectId,
                         deviceId = algorithmConfig.DeviceId,
-                        // ✅ 使用大写开头，与前端一致
-                        FilterType = algorithmConfig.FilterType,
-                        AlphaFilter = algorithmConfig.AlphaFilter,
-                        BetaFilter = algorithmConfig.BetaFilter,
-                        DeNoiseThread = algorithmConfig.DeNoiseThread,
-                        SensCoef = algorithmConfig.SensCoef,
-                        DefoImageDec = algorithmConfig.DefoImageDec,
-                        ScatImageDec = algorithmConfig.ScatImageDec,
-                        WinCoheren = algorithmConfig.WinCoheren,
-                        AtmPhaErrEstFuncSwitch = algorithmConfig.AtmPhaErrEstFuncSwitch,
-                        FilterWidth = algorithmConfig.FilterWidth,
-                        MonitorMode = algorithmConfig.MonitorMode,
-                        Monitor_Mode = algorithmConfig.MonitorMode,  // ✅ 兼容前端的下划线版本
-                        Win_Coheren = algorithmConfig.WinCoheren,    // ✅ 兼容前端的下划线版本
-                        Ipv4 = algorithmConfig.Ipv4
+                        // ✅ 返回32个算法参数字段
+                        MonMode = algorithmConfig.MonMode,
+                        PhaFltTypeCtrl = algorithmConfig.PhaFltTypeCtrl,
+                        FltHalfWinLen = algorithmConfig.FltHalfWinLen,
+                        AtmFltEn = algorithmConfig.AtmFltEn,
+                        MeanWgt = algorithmConfig.MeanWgt,
+                        CmpDefThr = algorithmConfig.CmpDefThr,
+                        CmpMult = algorithmConfig.CmpMult,
+                        AmpDetThr = algorithmConfig.AmpDetThr,
+                        AtmFltParaA = algorithmConfig.AtmFltParaA,
+                        AtmFltParaB = algorithmConfig.AtmFltParaB,
+                        AtmCorrThr2nd_1 = algorithmConfig.AtmCorrThr2nd_1,
+                        AtmCompUpdPer = algorithmConfig.AtmCompUpdPer,
+                        AtmCorrThr2nd_2 = algorithmConfig.AtmCorrThr2nd_2,
+                        DefImgDecim = algorithmConfig.DefImgDecim,
+                        CplxImgDecim = algorithmConfig.CplxImgDecim,
+                        AtmCorrAlg = algorithmConfig.AtmCorrAlg,
+                        AtmPhaErrEstDist_1 = algorithmConfig.AtmPhaErrEstDist_1,
+                        AtmPhaErrEstDist_2 = algorithmConfig.AtmPhaErrEstDist_2,
+                        StdDevWgt = algorithmConfig.StdDevWgt,
+                        ShortDefAccPara = algorithmConfig.ShortDefAccPara,
+                        DenoiseThr = algorithmConfig.DenoiseThr,
+                        IsNoiseEq = algorithmConfig.IsNoiseEq,
+                        NoiseEqType = algorithmConfig.NoiseEqType,
+                        AmpDevSelThrInit = algorithmConfig.AmpDevSelThrInit,
+                        CohCoeThrInit = algorithmConfig.CohCoeThrInit,
+                        CorrCoeffEffPSPts = algorithmConfig.CorrCoeffEffPSPts,
+                        EffPSPts = algorithmConfig.EffPSPts,
+                        IfgPhaResThr = algorithmConfig.IfgPhaResThr,
+                        SingPntThr = algorithmConfig.SingPntThr,
+                        PSPntSens = algorithmConfig.PSPntSens,
+                        PSThrAdjCoeff = algorithmConfig.PSThrAdjCoeff,
+                        CohHalfWinLen = algorithmConfig.CohHalfWinLen
                     }
                 });
             }

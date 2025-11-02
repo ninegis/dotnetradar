@@ -1,77 +1,136 @@
 @echo off
-chcp 65001 >nul
-title Build Frontend - RadarContrl
+chcp 65001 >nul 2>&1
+setlocal enabledelayedexpansion
+title Build Frontend
 
 echo.
 echo ========================================
-echo    前端构建和部署 (RadarContrl)
+echo    Frontend Build and Deploy
 echo ========================================
 echo.
 
-REM [1/4] 检查Node.js
-echo [1/4] 检查Node.js环境...
-node --version >nul 2>&1
+REM Get script directory
+set "SCRIPT_DIR=%~dp0"
+set "SCRIPT_DIR=%SCRIPT_DIR:~0,-1%"
+
+REM [1/4] Check Node.js
+echo [1/4] Checking Node.js...
+where node >nul 2>&1
 if errorlevel 1 (
-    echo ❌ 错误: 未找到Node.js
-    echo.
-    echo 下载: https://nodejs.org
+    echo [ERROR] Node.js not found
+    echo Please install Node.js from https://nodejs.org
     pause
     exit /b 1
 )
-for /f "delims=" %%v in ('node --version') do set NODE_VERSION=%%v
-echo ✅ Node.js: %NODE_VERSION%
+for /f "delims=" %%v in ('node --version 2^>nul') do set NODE_VERSION=%%v
+echo [OK] Node.js: %NODE_VERSION%
 
-REM [2/4] 构建前端
+REM [2/4] Build frontend
 echo.
-echo [2/4] 构建前端项目 (RadarContrl)...
-cd /d "%~dp0RadarContrl"
+echo [2/4] Building frontend project...
+set "FRONTEND_DIR=%SCRIPT_DIR%\RadarContrl"
+
+if not exist "%FRONTEND_DIR%" (
+    echo [ERROR] Frontend directory not found: %FRONTEND_DIR%
+    pause
+    exit /b 1
+)
+
+if not exist "%FRONTEND_DIR%\package.json" (
+    echo [ERROR] package.json not found: %FRONTEND_DIR%\package.json
+    pause
+    exit /b 1
+)
+
+cd /d "%FRONTEND_DIR%"
+if errorlevel 1 (
+    echo [ERROR] Cannot change to frontend directory
+    pause
+    exit /b 1
+)
+
+REM Check and install dependencies if needed
+if not exist "node_modules" (
+    echo [INFO] Installing dependencies...
+    call npm install
+    if errorlevel 1 (
+        echo [ERROR] npm install failed
+        cd /d "%SCRIPT_DIR%"
+        pause
+        exit /b 1
+    )
+)
+
+echo [INFO] Running npm build...
 call npm run build
 if errorlevel 1 (
-    echo ❌ 前端构建失败
-    cd /d "%~dp0"
+    echo [ERROR] Frontend build failed
+    echo Please check the error messages above
+    cd /d "%SCRIPT_DIR%"
     pause
     exit /b 1
 )
-echo ✅ 前端构建成功
+echo [OK] Frontend build successful
 
-REM [3/4] 部署到wwwroot
+REM [3/4] Deploy to wwwroot
 echo.
-echo [3/4] 部署到wwwroot...
-cd /d "%~dp0"
-if exist "RadarSystem.WebAPI\wwwroot" (
-    rd /s /q "RadarSystem.WebAPI\wwwroot"
+echo [3/4] Deploying to wwwroot...
+cd /d "%SCRIPT_DIR%"
+set "WWWROOT_DIR=%SCRIPT_DIR%\RadarSystem.WebAPI\wwwroot"
+set "DIST_DIR=%FRONTEND_DIR%\dist"
+
+if not exist "%DIST_DIR%" (
+    echo [ERROR] Build output directory not found: %DIST_DIR%
+    echo Please confirm frontend build was successful
+    pause
+    exit /b 1
 )
-xcopy /E /I /Y /Q "RadarContrl\dist\*" "RadarSystem.WebAPI\wwwroot\"
+
+if exist "%WWWROOT_DIR%" (
+    echo [INFO] Cleaning old wwwroot directory...
+    rd /s /q "%WWWROOT_DIR%" 2>nul
+)
+
+echo [INFO] Copying files to wwwroot...
+if not exist "%WWWROOT_DIR%" mkdir "%WWWROOT_DIR%"
+xcopy /E /I /Y "%DIST_DIR%\*" "%WWWROOT_DIR%\" >nul 2>&1
 if errorlevel 1 (
-    echo ❌ 部署失败
+    echo [ERROR] Deployment failed
+    echo Please check file permissions or disk space
     pause
     exit /b 1
 )
-echo ✅ 部署完成
+echo [OK] Deployment completed
 
-REM [4/5] 构建后端
+REM [4/5] Build backend
 echo.
-echo [4/5] 构建后端项目...
-cd /d "%~dp0RadarSystem.WebAPI"
-dotnet build --configuration Release --verbosity quiet
+echo [4/5] Building backend project...
+set "BACKEND_DIR=%SCRIPT_DIR%\RadarSystem.WebAPI"
+cd /d "%BACKEND_DIR%"
 if errorlevel 1 (
-    echo ❌ 后端构建失败
+    echo [ERROR] Cannot change to backend directory
     pause
     exit /b 1
 )
-echo ✅ 后端构建成功
 
-REM ============================================
-REM [5/5] 启动系统服务
-REM ============================================
+echo [INFO] Running dotnet build...
+dotnet build --configuration Release --verbosity minimal
+if errorlevel 1 (
+    echo [ERROR] Backend build failed
+    echo Please check the error messages above
+    pause
+    exit /b 1
+)
+echo [OK] Backend build successful
+
+REM [5/5] Start system service
 echo.
-echo [5/5] 启动系统服务...
-cd /d "%~dp0RadarSystem.WebAPI"
+echo [5/5] Starting system service...
 
-REM 检查端口是否被占用
+REM Check if ports are in use
 netstat -ano | findstr ":6098" >nul 2>&1
 if not errorlevel 1 (
-    echo ⚠️  端口 6098 已被占用，尝试停止现有进程...
+    echo [WARN] Port 6098 is in use, trying to stop existing process...
     for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":6098" ^| findstr "LISTENING"') do (
         taskkill /F /PID %%a >nul 2>&1
     )
@@ -80,7 +139,7 @@ if not errorlevel 1 (
 
 netstat -ano | findstr ":8099" >nul 2>&1
 if not errorlevel 1 (
-    echo ⚠️  端口 8099 已被占用，尝试停止现有进程...
+    echo [WARN] Port 8099 is in use, trying to stop existing process...
     for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":8099" ^| findstr "LISTENING"') do (
         taskkill /F /PID %%a >nul 2>&1
     )
@@ -89,37 +148,36 @@ if not errorlevel 1 (
 
 echo.
 echo ========================================
-echo    🚀 系统启动中...
+echo    System Starting...
 echo ========================================
 echo.
-echo 📍 访问地址:
-echo    🌐 前端界面: http://localhost:6098
-echo    📡 API 服务: http://localhost:8099
-echo    📖 API 文档: http://localhost:8099/swagger
+echo Access URLs:
+echo    Frontend: http://localhost:6098
+echo    API:      http://localhost:8099
+echo    Swagger:  http://localhost:8099/swagger
 echo.
-echo 👤 默认账户:
-echo    用户名: admin
-echo    密码:   admin123
+echo Default Account:
+echo    Username: admin
+echo    Password: admin123
 echo.
-echo 💡 提示: 按 Ctrl+C 停止服务
+echo Press Ctrl+C to stop the service
 echo.
 echo ========================================
-echo    系统运行中...
+echo    System Running...
 echo ========================================
 echo.
 
-REM 等待 2 秒后打开浏览器
+REM Wait 2 seconds then open browser
 timeout /t 2 /nobreak >nul
 start "" "http://localhost:6098"
 
-REM 启动应用
+REM Start application
 dotnet run --configuration Release --no-build --urls "http://localhost:8099"
 
-REM 如果程序退出，显示消息
+REM If program exits, show message
 echo.
 echo ========================================
-echo    ⏹️  系统已停止
+echo    System Stopped
 echo ========================================
 echo.
 pause
-
