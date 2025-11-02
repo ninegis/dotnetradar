@@ -27,9 +27,13 @@ const {locale} = useI18n();
 const store = useMapStore();
 onMounted(()=>{
   instanceReset(store.sysinfo.ucmlInfo.userOid).then(()=>{
+    // ✅ 修复：根据 store 中的语言设置初始化 i18n locale
     if (store.sysinfo.config.language==="1"){
       locale.value = 'en';
       store.sysinfo.title = store.sysinfo.config.i18Title;
+    } else {
+      // ✅ 确保默认语言是中文
+      locale.value = 'zh';
     }
     ApiRadar.apiUrl = store.sysinfo.serverIp;
     CesiumUtils.CesiumInit().then(()=>{

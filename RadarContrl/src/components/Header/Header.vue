@@ -18,13 +18,16 @@
 
       <el-tooltip :content="$t('other.translation')" placement="top">
         <el-dropdown @command="localeOnChange" style="top: 10px;margin-right: 10px;">
-          <el-icon :size="24">
-            <svg x="1740539374907" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="16185" width="24" height="24"><path d="M938.666667 981.333333c-17.066667 0-29.866667-8.533333-38.4-25.6l-59.733334-119.466666h-277.333333l-59.733333 119.466666c-8.533333 21.333333-34.133333 29.866667-55.466667 17.066667-25.6-8.533333-34.133333-34.133333-21.333333-51.2l72.533333-140.8 145.066667-290.133333c12.8-21.333333 34.133333-38.4 59.733333-38.4s46.933333 12.8 59.733333 38.4l145.066667 290.133333 72.533333 140.8c8.533333 21.333333 0 46.933333-17.066666 55.466667-12.8 4.266667-17.066667 4.266667-25.6 4.266666z m-332.8-226.133333h192l-98.133334-192-93.866666 192zM85.333333 844.8c-17.066667 0-29.866667-8.533333-38.4-25.6-8.533333-21.333333 0-46.933333 21.333334-55.466667 93.866667-46.933333 179.2-110.933333 247.466666-187.733333-46.933333-64-85.333333-128-110.933333-192-8.533333-21.333333 4.266667-46.933333 25.6-55.466667 21.333333-8.533333 46.933333 4.266667 55.466667 25.6 21.333333 51.2 46.933333 102.4 81.066666 149.333334 59.733333-85.333333 102.4-179.2 128-281.6H85.333333c-25.6 0-42.666667-17.066667-42.666666-42.666667s17.066667-42.666667 42.666666-42.666667h243.2V85.333333c0-25.6 17.066667-42.666667 42.666667-42.666666s42.666667 17.066667 42.666667 42.666666v51.2h238.933333c25.6 0 42.666667 17.066667 42.666667 42.666667s-17.066667 42.666667-42.666667 42.666667h-68.266667c-25.6 128-85.333333 247.466667-162.133333 349.866666l25.6 25.6c17.066667 17.066667 17.066667 42.666667 0 59.733334-17.066667 17.066667-42.666667 17.066667-59.733333 0l-17.066667-17.066667c-72.533333 81.066667-162.133333 149.333333-264.533333 200.533333-8.533333 0-17.066667 4.266667-21.333334 4.266667z" fill="currentColor" p-id="16186"></path></svg>
-          </el-icon>
+          <span style="cursor: pointer; display: inline-flex; align-items: center; color: #fff;">
+            <el-icon :size="24" style="margin-right: 4px;">
+              <svg x="1740539374907" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="16185" width="24" height="24"><path d="M938.666667 981.333333c-17.066667 0-29.866667-8.533333-38.4-25.6l-59.733334-119.466666h-277.333333l-59.733333 119.466666c-8.533333 21.333333-34.133333 29.866667-55.466667 17.066667-25.6-8.533333-34.133333-34.133333-21.333333-51.2l72.533333-140.8 145.066667-290.133333c12.8-21.333333 34.133333-38.4 59.733333-38.4s46.933333 12.8 59.733333 38.4l145.066667 290.133333 72.533333 140.8c8.533333 21.333333 0 46.933333-17.066666 55.466667-12.8 4.266667-17.066667 4.266667-25.6 4.266666z m-332.8-226.133333h192l-98.133334-192-93.866666 192zM85.333333 844.8c-17.066667 0-29.866667-8.533333-38.4-25.6-8.533333-21.333333 0-46.933333 21.333334-55.466667 93.866667-46.933333 179.2-110.933333 247.466666-187.733333-46.933333-64-85.333333-128-110.933333-192-8.533333-21.333333 4.266667-46.933333 25.6-55.466667 21.333333-8.533333 46.933333 4.266667 55.466667 25.6 21.333333 51.2 46.933333 102.4 81.066666 149.333334 59.733333-85.333333 102.4-179.2 128-281.6H85.333333c-25.6 0-42.666667-17.066667-42.666666-42.666667s17.066667-42.666667 42.666666-42.666667h243.2V85.333333c0-25.6 17.066667-42.666667 42.666667-42.666666s42.666667 17.066667 42.666667 42.666666v51.2h238.933333c25.6 0 42.666667 17.066667 42.666667 42.666667s-17.066667 42.666667-42.666667 42.666667h-68.266667c-25.6 128-85.333333 247.466667-162.133333 349.866666l25.6 25.6c17.066667 17.066667 17.066667 42.666667 0 59.733334-17.066667 17.066667-42.666667 17.066667-59.733333 0l-17.066667-17.066667c-72.533333 81.066667-162.133333 149.333333-264.533333 200.533333-8.533333 0-17.066667 4.266667-21.333334 4.266667z" fill="currentColor" p-id="16186"></path></svg>
+            </el-icon>
+            <span style="font-size: 12px;">{{store.sysinfo.config.language==="0"?$t('common.chinese'):$t('common.english')}}</span>
+          </span>
           <template #dropdown>
             <el-dropdown-menu>
-              <el-dropdown-item :command="0">{{$t('common.chinese')}}</el-dropdown-item>
-              <el-dropdown-item :command="1">{{$t('common.english')}}</el-dropdown-item>
+              <el-dropdown-item :command="0" :class="{'is-selected': currentLanguage === 0}">{{$t('common.chinese')}}</el-dropdown-item>
+              <el-dropdown-item :command="1" :class="{'is-selected': currentLanguage === 1}">{{$t('common.english')}}</el-dropdown-item>
             </el-dropdown-menu>
           </template>
         </el-dropdown>
@@ -43,7 +46,7 @@
 <script setup>
 // Sloperadar Backstage Cesium / 2024-06-22 / 15:17:05 / 71901
 /*-- imports --*/
-import {defineComponent, ref, onMounted, computed, reactive, toRaw, h} from 'vue';
+import {defineComponent, ref, onMounted, computed, reactive, toRaw, h, watch} from 'vue';
 import {useMapStore} from "@/store/index.js";
 import {CloseCircleOutlined, CloseOutlined, PlusOutlined} from "@ant-design/icons-vue";
 import {useRouter} from "vue-router";
@@ -72,6 +75,12 @@ const { t,locale } = useI18n();
 const router = useRouter();
 /*-- vars --*/
 
+/*-- computed --*/
+// ✅ 当前语言值（用于显示）
+const currentLanguage = computed(() => {
+  return store.sysinfo.config.language === "0" ? 0 : 1;
+});
+
 /*-- methods --*/
 const localeOnChange=(value)=>{
   locale.value = value===0?'zh':'en';
@@ -92,7 +101,23 @@ const projectOnChange=()=>{
 }
 /*-- events --*/
 onMounted(() => {
-  //console.log('Header.onMounted');
+  // ✅ 修复：根据 store 中的语言设置初始化 i18n locale
+  if (store.sysinfo.config.language === "0") {
+    locale.value = 'zh';
+  } else {
+    locale.value = 'en';
+  }
+  console.log('Header初始化语言:', locale.value, 'store语言:', store.sysinfo.config.language);
+});
+
+// ✅ 监听 store 语言变化，同步更新 i18n locale
+watch(() => store.sysinfo.config.language, (newLang) => {
+  if (newLang === "0") {
+    locale.value = 'zh';
+  } else {
+    locale.value = 'en';
+  }
+  console.log('语言已切换:', locale.value);
 });
 </script>
 

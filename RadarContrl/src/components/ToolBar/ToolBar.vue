@@ -41,7 +41,7 @@
       <template #overlay>
         <a-menu @click="handleCommandMenuClick" theme="dark">
           <a-menu-item :key="item.key" v-for="item in toolList">
-            {{store.sysinfo.config.language==="0"?item.title:item.englishTitle}}
+            {{isChinese ? item.title : item.englishTitle}}
           </a-menu-item>
         </a-menu>
       </template>
@@ -60,7 +60,7 @@
       <component :is="currentComponent" :visible="'show'"/>
     </div>
     <div class="rightbottom-toolbar">
-      <el-tooltip :content="store.sysinfo.config.language==='0'?item.content:item.englishName" v-for="item in props.toolbar">
+      <el-tooltip :content="isChinese ? item.content : item.englishName" v-for="item in props.toolbar">
         <div class="toolbaricon" @click="iconClick(item.name)">
           <img :src="item.icon" :alt="item.content">
         </div>
@@ -231,6 +231,12 @@ const dropdownvisible = ref(false);
 const tempEntityIds = ref([]);
 
 /*-- computed --*/
+// ✅ 修复：确保语言判断使用正确的值
+const isChinese = computed(() => {
+  const lang = String(store.sysinfo.config.language || "0");
+  return lang === "0";
+});
+
 const currentComponent = computed(() => {
   console.log('=== currentComponent 计算属性被调用 ===');
   console.log('当前toolbarcontent:', store.toolbarcontent);
@@ -435,7 +441,14 @@ function dropdownClick(e){
 }
 /*-- events --*/
 onMounted(()=>{
-
+  // ✅ 修复：确保语言值正确初始化
+  if (!store.sysinfo.config.language || store.sysinfo.config.language === null || store.sysinfo.config.language === undefined) {
+    store.sysinfo.config.language = "0";  // 默认中文
+  } else {
+    // 确保是字符串类型
+    store.sysinfo.config.language = String(store.sysinfo.config.language);
+  }
+  console.log('ToolBar初始化语言:', store.sysinfo.config.language, 'isChinese:', isChinese.value);
 })
 
 </script>
