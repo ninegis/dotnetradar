@@ -23,7 +23,7 @@ export const useMapStore = defineStore("sloperadarControl", {
                     postOid: null,
                     userOid: null
                 },
-                websocketUrl: null,
+                websocketUrl: 'ws://' + window.location.hostname + ':8099/wss',  // 动态获取
                 address: null,
                 config: {
                     radarHeart: 0,
@@ -46,7 +46,8 @@ export const useMapStore = defineStore("sloperadarControl", {
             projectInfo: {
                 deviceData: [],
                 projectData: [],
-                projectSelected: ''
+                projectSelected: '',
+                currentScene: null  // ✅ 当前项目场景信息
             },
             radarInfo: {
                 entityId: null,
@@ -101,7 +102,10 @@ export const useMapStore = defineStore("sloperadarControl", {
             this.toolbarcontent = '';
         },
         startRadarMQTT() {
-            this.client = mqtt.connect(this.sysinfo.websocketUrl, this.options);
+            // 动态获取WebSocket地址
+            const wsUrl = 'ws://' + window.location.hostname + ':8083/mqtt';  // EMQX
+            console.log('[WebSocket] 连接地址:', wsUrl);
+            this.client = mqtt.connect(wsUrl, this.options);
 
             let that = this;
             const heartbeatEvent = () => {
@@ -113,6 +117,8 @@ export const useMapStore = defineStore("sloperadarControl", {
                 }
             }
             this.client.on('connect', (e) => {
+                console.log('[MQTT] 已连接到EMQX');
+                this.client.subscribe('/dev/device/status', {}, (error) => { });  // ✅ 订阅设备状态
                 this.client.subscribe('/dev/radar/mimoLite/defo/command', {}, (error) => { });
                 this.client.subscribe('/dev/radar/mimo/defo/command/reponse', {}, (error) => { });
                 this.client.subscribe('/dev/radar/mimoLite/defo/command', {}, (error) => { });
@@ -130,6 +136,14 @@ export const useMapStore = defineStore("sloperadarControl", {
             this.client.on('message', (topic, message) => {
                 const msg = message.toString()
                 const obj = JSON.parse(msg);
+                
+                // ✅ 处理设备状态更新
+                if (topic === '/dev/device/status') {
+                    console.log('[DeviceStatus]', obj);
+                    this.updateDeviceOnlineStatus(obj);
+                    return;
+                }
+                
                 switch (topic) {
                     case '/dev/image': {
                         const index = CommonUtils.FindIndexOfArray('time', obj['ts'], this.imageData);
@@ -178,5 +192,155 @@ export const useMapStore = defineStore("sloperadarControl", {
                 console.log('连接失败:', error)
             })
         },
+        // ✅ 加载项目场景并定位
+        loadProjectScene(projectData) {
+            if (!projectData) {
+                console.warn('[场景定位] 项目数据为空');
+                return;
+            }
+            
+            // ✅ 优先使用场景配置，如果没有则使用项目位置或默认值
+            const sceneLongitude = projectData.sceneLongitude ?? projectData.longitude ?? 120.0;
+            const sceneLatitude = projectData.sceneLatitude ?? projectData.latitude ?? 30.0;
+            const sceneHeight = projectData.sceneHeight ?? projectData.elevation ?? 500.0;
+            const sceneHeading = projectData.sceneHeading ?? 0.0;
+            const scenePitch = projectData.scenePitch ?? -45.0;
+            const sceneRoll = projectData.sceneRoll ?? 0.0;
+            
+            // 保存场景信息
+            this.projectInfo.currentScene = {
+                longitude: sceneLongitude,
+                latitude: sceneLatitude,
+                height: sceneHeight,
+                heading: sceneHeading,
+                pitch: scenePitch,
+                roll: sceneRoll
+            };
+            
+            console.log('[场景定位] 项目:', projectData.projectId || projectData.projectName, this.projectInfo.currentScene);
+            
+            // ✅ 获取viewer（优先window.viewer，其次CesiumUtils.viewer）
+            const getViewer = () => {
+                if (window.viewer) return window.viewer;
+                if (window.CesiumUtils && window.CesiumUtils.viewer) return window.CesiumUtils.viewer;
+                return null;
+            };
+            
+            const getCesium = () => {
+                if (window.Cesium) return window.Cesium;
+                if (window.CesiumUtils && window.CesiumUtils.Cesium) return window.CesiumUtils.Cesium;
+                return null;
+            };
+            
+            // ✅ 等待Cesium初始化完成后再定位（增加最大重试次数）
+            let retryCount = 0;
+            const maxRetries = 50; // 最多重试5秒
+            
+            const tryFlyTo = () => {
+                const viewer = getViewer();
+                const Cesium = getCesium();
+                
+                if (viewer && Cesium) {
+                    console.log('[场景定位] 执行飞行到项目位置:', {
+                        lon: sceneLongitude,
+                        lat: sceneLatitude,
+                        height: sceneHeight,
+                        heading: sceneHeading,
+                        pitch: scenePitch
+                    });
+                    
+                    try {
+                        viewer.camera.flyTo({
+                            destination: Cesium.Cartesian3.fromDegrees(
+                                sceneLongitude,
+                                sceneLatitude,
+                                sceneHeight
+                            ),
+                            orientation: {
+                                heading: Cesium.Math.toRadians(sceneHeading),
+                                pitch: Cesium.Math.toRadians(scenePitch),
+                                roll: Cesium.Math.toRadians(sceneRoll)
+                            },
+                            duration: 2.0
+                        });
+                        console.log('[场景定位] 飞行命令已执行');
+                    } catch (error) {
+                        console.error('[场景定位] 飞行执行失败:', error);
+                    }
+                } else {
+                    retryCount++;
+                    if (retryCount < maxRetries) {
+                        console.log(`[场景定位] Cesium未就绪，100ms后重试 (${retryCount}/${maxRetries})`, {
+                            hasViewer: !!viewer,
+                            hasCesium: !!Cesium,
+                            windowViewer: !!window.viewer,
+                            cesiumUtilsViewer: !!(window.CesiumUtils && window.CesiumUtils.viewer)
+                        });
+                        setTimeout(tryFlyTo, 100);
+                    } else {
+                        console.error('[场景定位] 超过最大重试次数，定位失败');
+                    }
+                }
+            };
+            
+            // 立即尝试或延迟执行
+            const viewer = getViewer();
+            const Cesium = getCesium();
+            if (viewer && Cesium) {
+                tryFlyTo();
+            } else {
+                console.log('[场景定位] Cesium未就绪，开始重试...');
+                setTimeout(tryFlyTo, 100);
+            }
+            
+            // 同时发送事件通知（兼容旧代码）
+            window.dispatchEvent(new CustomEvent('project-scene-loaded', {
+                detail: this.projectInfo.currentScene
+            }));
+        },
+        
+        // ✅ 更新设备在线状态
+        updateDeviceOnlineStatus(statusData) {
+            const { deviceId, factoryId, status, timestamp } = statusData;
+            
+            console.log('[MQTT收到设备状态]', statusData);
+            
+            // 查找设备并更新状态（支持多种匹配方式）
+            let device = this.projectData.deviceData.find(d => d.deviceId === deviceId);
+            
+            if (!device && factoryId) {
+                // 尝试通过factoryId查找
+                device = this.projectData.deviceData.find(d => d.factoryId === factoryId);
+            }
+            
+            if (!device) {
+                // 尝试通过设备ID的不同格式查找
+                device = this.projectData.deviceData.find(d => 
+                    d.id === deviceId || d.id === factoryId
+                );
+            }
+            
+            if (device) {
+                // 更新状态（兼容不同字段名）
+                if (device.status !== undefined) device.status = status;
+                if (device.online !== undefined) device.online = status === 'online';
+                if (device.lastHeartbeat !== undefined) device.lastHeartbeat = timestamp;
+                
+                console.log(`[设备状态更新成功] ${device.deviceName || deviceId}: ${status}`);
+                
+                // 显示通知
+                if (status === 'online') {
+                    showMessage(`设备上线: ${device.deviceName || deviceId}`, 'success');
+                } else {
+                    showMessage(`设备离线: ${device.deviceName || deviceId}`, 'warning');
+                }
+                
+                // 强制更新视图
+                this.projectData = {...this.projectData};
+            } else {
+                console.warn('[设备状态] 未找到设备:', deviceId, factoryId);
+                console.log('[当前设备列表]', this.projectData.deviceData.map(d => ({id: d.id, deviceId: d.deviceId, factoryId: d.factoryId})));
+            }
+        }
     }
 })

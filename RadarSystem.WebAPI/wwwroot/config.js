@@ -6,7 +6,7 @@
     window.localrelease = {
         // C# 后端地址（自动匹配当前访问地址）
         url: protocol + '//' + hostname + ':8099',
-        websocketUrl: 'ws://' + hostname + ':8099/wss',
+        websocketUrl: 'ws://' + hostname + ':8083/mqtt',  // EMQX WebSocket端口
         
         // 登录凭证（开发测试用）
         username: 'admin',

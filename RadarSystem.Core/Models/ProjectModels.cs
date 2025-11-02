@@ -27,6 +27,14 @@ namespace RadarSystem.Core.Models
         public double Latitude { get; set; }
         public double Elevation { get; set; }
         
+        // ✅ 场景初始化信息
+        public double SceneLongitude { get; set; } = 120.0;
+        public double SceneLatitude { get; set; } = 30.0;
+        public double SceneHeight { get; set; } = 500.0;
+        public double SceneHeading { get; set; } = 0.0;
+        public double ScenePitch { get; set; } = -45.0;
+        public double SceneRoll { get; set; } = 0.0;
+        
         // 时间信息
         public DateTime StartDate { get; set; }
         public DateTime? EndDate { get; set; }

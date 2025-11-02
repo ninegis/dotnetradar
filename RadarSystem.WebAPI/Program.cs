@@ -124,7 +124,14 @@ var mqttConfig = new RadarSystem.Communication.Services.MqttConfiguration
     ReconnectDelay = builder.Configuration.GetValue<int>("Mqtt:ReconnectDelay", 5000)
 };
 
-// ✅ 注册MQTT服务（使用延迟初始化，如果MQTT Broker不可用则只记录警告）
+// ✅ 升级为EMQX MQTT Broker
+// 注释掉MQTTnet内置Broker，改为连接外部EMQX
+// builder.Services.AddHostedMqttServer(...)
+
+// EMQX将在1883和8083端口运行
+// 前端连接: ws://hostname:8083/mqtt
+
+// ✅ 注册MQTT客户端服务
 builder.Services.AddSingleton<RadarSystem.Communication.Services.MqttService>(sp =>
 {
     var logger = sp.GetRequiredService<ILogger<RadarSystem.Communication.Services.MqttService>>();
@@ -249,8 +256,10 @@ app.UseSwaggerUI(c =>
 // ✅ 启用WebSocket支持
 app.UseWebSockets();
 
+// ✅ EMQX作为外部MQTT Broker，不需要app.UseMqttServer
+// EMQX提供MQTT服务（1883端口）和WebSocket服务（8083端口）
+
 // 使用中间件
-app.UseMiddleware<WebSocketMiddleware>(); // ✅ WebSocket中间件
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseMiddleware<RequestLoggingMiddleware>();
 
@@ -287,6 +296,39 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<RadarDbContext>();
     db.Database.EnsureCreated();
     Log.Information("数据库初始化完成");
+    
+    // ✅ 添加项目场景字段
+    try
+    {
+        var connection = db.Database.GetDbConnection();
+        connection.Open();
+        using var cmd = connection.CreateCommand();
+        
+        // 检查并添加场景字段
+        cmd.CommandText = "PRAGMA table_info(Projects)";
+        var reader = cmd.ExecuteReader();
+        var columns = new List<string>();
+        while (reader.Read()) columns.Add(reader.GetString(1));
+        reader.Close();
+        
+        if (!columns.Contains("SceneLongitude"))
+        {
+            cmd.CommandText = @"
+                ALTER TABLE Projects ADD COLUMN SceneLongitude REAL DEFAULT 120.0;
+                ALTER TABLE Projects ADD COLUMN SceneLatitude REAL DEFAULT 30.0;
+                ALTER TABLE Projects ADD COLUMN SceneHeight REAL DEFAULT 500.0;
+                ALTER TABLE Projects ADD COLUMN SceneHeading REAL DEFAULT 0.0;
+                ALTER TABLE Projects ADD COLUMN ScenePitch REAL DEFAULT -45.0;
+                ALTER TABLE Projects ADD COLUMN SceneRoll REAL DEFAULT 0.0;
+            ";
+            cmd.ExecuteNonQuery();
+            Log.Information("✅ 项目场景字段已添加");
+        }
+    }
+    catch (Exception ex)
+    {
+        Log.Warning(ex, "添加场景字段失败（可能已存在）");
+    }
     
     // 应用数据库迁移（添加新字段和新表）
     try

@@ -131,6 +131,13 @@ namespace RadarSystem.WebAPI.Controllers
                         EndDate = e.EndDate,
                         CreateTime = e.CreateTime,
                         UpdateTime = e.UpdateTime,
+                        // ✅ 场景字段
+                        SceneLongitude = e.SceneLongitude,
+                        SceneLatitude = e.SceneLatitude,
+                        SceneHeight = e.SceneHeight,
+                        SceneHeading = e.SceneHeading,
+                        ScenePitch = e.ScenePitch,
+                        SceneRoll = e.SceneRoll,
                         Devices = devices
                     };
                     
@@ -187,6 +194,13 @@ namespace RadarSystem.WebAPI.Controllers
                     EndDate = entity.EndDate,
                     CreateTime = entity.CreateTime,
                     UpdateTime = entity.UpdateTime,
+                    // ✅ 场景字段
+                    SceneLongitude = entity.SceneLongitude,
+                    SceneLatitude = entity.SceneLatitude,
+                    SceneHeight = entity.SceneHeight,
+                    SceneHeading = entity.SceneHeading,
+                    ScenePitch = entity.ScenePitch,
+                    SceneRoll = entity.SceneRoll,
                     Devices = deviceEntities.Select(d => new Device
                     {
                         Id = d.Id,

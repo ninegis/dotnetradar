@@ -43,8 +43,12 @@ import {point, center, featureCollection, distance} from '@turf/turf';
 import {c32lonlat} from "@/utils/tools.js";
 import {TurfUtils} from "@/utils/TurfUtils.js";
 
+// ✅ 导出Cesium对象供全局使用
+import * as Cesium from 'cesium';
+
 export class CesiumUtils{
     static viewer = null;
+    static Cesium = Cesium; // ✅ 导出Cesium对象
     static CameraFlyToPostion(longitude,latitude,altitude,heading,pitch,roll){
         this.viewer.camera.flyTo({
             destination : Cartesian3.fromDegrees(parseFloat(longitude),parseFloat(latitude),parseFloat(altitude)),

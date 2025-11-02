@@ -308,13 +308,59 @@ const commitUpdate = async ()=>{
     showMessage('更新项目失败: ' + (error.response?.data?.message || error.message), 'error');
   }
 }
+// ✅ 防止重复提交标志
+let isSavingScene = false;
+
 const setCamera=()=>{
+  // ✅ 防止重复调用
+  if (isSavingScene) {
+    console.log('[场景保存] 正在保存中，忽略重复请求');
+    return;
+  }
+  
+  if (!store.radarInfo.projectId) {
+    showMessage('请先选择项目', 'warning');
+    return;
+  }
+  
   const params = CesiumUtils.GetCameraParams();
+  console.log('[场景保存] 开始保存场景:', {
+    projectId: store.radarInfo.projectId,
+    lon: params.longitude,
+    lat: params.latitude,
+    alt: params.altitude,
+    heading: params.heading,
+    pitch: params.pitch,
+    roll: params.roll
+  });
+  
+  isSavingScene = true;
+  
   ApiRadar.addCameraParams(store.radarInfo.projectId,params.longitude,
   params.latitude,params.altitude,params.heading,params.pitch,params.roll).then((res)=>{
-    showMessage(t('common.setSuccess'));
+    isSavingScene = false;
+    console.log('[场景保存] 保存成功:', res.data);
+    if (res.data && (res.data.code === 200 || res.data.success)) {
+      showMessage(t('common.setSuccess'));
+      // ✅ 更新store中的场景信息
+      const project = store.projectInfo.projectData.find(p => p.projectId === store.radarInfo.projectId);
+      if (project) {
+        project.sceneLongitude = params.longitude;
+        project.sceneLatitude = params.latitude;
+        project.sceneHeight = params.altitude;
+        project.sceneHeading = params.heading;
+        project.scenePitch = params.pitch;
+        project.sceneRoll = params.roll;
+      }
+    } else {
+      showMessage('保存失败: ' + (res.data?.message || '未知错误'), 'error');
+    }
     ApiRadar.AddRadarLog("设置初始化场景",store.sysinfo.config.username,store.sysinfo.address,store.sysinfo.config.projectCode, store.sysinfo.config.shortName).then();
-  })
+  }).catch(err => {
+    isSavingScene = false;
+    console.error('[场景保存] 保存失败:', err);
+    showMessage('保存失败: ' + (err.message || '网络错误'), 'error');
+  });
 }
 /*-- events --*/
 onMounted(async () => {

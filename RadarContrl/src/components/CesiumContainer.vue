@@ -26,6 +26,27 @@ defineComponent({
 const {locale} = useI18n();
 const store = useMapStore();
 onMounted(()=>{
+  // ✅ 监听项目场景加载事件
+  window.addEventListener('project-scene-loaded', (event) => {
+    const scene = event.detail;
+    if (window.viewer && scene) {
+      console.log('[Cesium] 定位到项目场景:', scene);
+      window.viewer.camera.flyTo({
+        destination: window.Cesium.Cartesian3.fromDegrees(
+          scene.longitude,
+          scene.latitude,
+          scene.height
+        ),
+        orientation: {
+          heading: window.Cesium.Math.toRadians(scene.heading),
+          pitch: window.Cesium.Math.toRadians(scene.pitch),
+          roll: window.Cesium.Math.toRadians(scene.roll)
+        },
+        duration: 2.0
+      });
+    }
+  });
+  
   instanceReset(store.sysinfo.ucmlInfo.userOid).then(()=>{
     // ✅ 修复：根据 store 中的语言设置初始化 i18n locale
     if (store.sysinfo.config.language==="1"){
@@ -36,7 +57,17 @@ onMounted(()=>{
       locale.value = 'zh';
     }
     ApiRadar.apiUrl = store.sysinfo.serverIp;
-    CesiumUtils.CesiumInit().then(()=>{
+    CesiumUtils.CesiumInit().then((viewer)=>{
+      // ✅ 设置全局viewer引用
+      window.viewer = viewer;
+      window.CesiumUtils = CesiumUtils;
+      // ✅ 设置Cesium对象（从CesiumUtils获取）
+      if (CesiumUtils.Cesium) {
+        window.Cesium = CesiumUtils.Cesium;
+        console.log('[Cesium初始化] Cesium对象已设置', !!window.Cesium);
+      }
+      console.log('[Cesium初始化] viewer已设置到window.viewer', !!window.viewer);
+      
       loadLayer(store.sysinfo.ucmlInfo.orgOid).then(()=>{
         ApiRadar.getRadarData().then(async res=>{
           // ✅ 初始化项目数据，确保每个项目都有devices数组
@@ -124,8 +155,15 @@ onMounted(()=>{
             }
             
             staticDataBind();
-            if (data['defaultCamera'] && data['defaultCamera']['lon'] !== undefined) {
+            // ✅ 优先使用场景配置，如果没有则使用默认相机配置
+            if (data.sceneLongitude && data.sceneLatitude) {
+              console.log('[首次加载] 使用项目场景配置定位');
+              store.loadProjectScene(data);
+            } else if (data['defaultCamera'] && data['defaultCamera']['lon'] !== undefined) {
+              console.log('[首次加载] 使用默认相机配置定位');
               CesiumUtils.CameraFlyToPostion(data['defaultCamera']['lon'],data['defaultCamera']['lat'],data['defaultCamera']['alt'],data['defaultCamera']['heading'],data['defaultCamera']['pitch'],data['defaultCamera']['roll']);
+            } else {
+              console.log('[首次加载] 没有场景配置，使用默认位置');
             }
             monitorLoad(data.geoMarks||[]);
             store.startRadarMQTT();

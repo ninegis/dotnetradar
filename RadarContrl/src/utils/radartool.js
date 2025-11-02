@@ -330,6 +330,17 @@ export const staticDataBind = () => {
     store.radarInfo.smsNotifyConfig = data.smsNotifyConfig;
     //预警联系人配置
     store.radarInfo.ruleContact = data.contactsAlarm;
+    
+    // ✅ 加载项目场景并定位到项目位置（总是调用，内部会处理默认值）
+    console.log('[staticDataBind] 加载项目场景:', {
+        projectId: data.projectId,
+        sceneLongitude: data.sceneLongitude,
+        sceneLatitude: data.sceneLatitude,
+        sceneHeight: data.sceneHeight,
+        longitude: data.longitude,
+        latitude: data.latitude
+    });
+    store.loadProjectScene(data);
 }
 export function getUUID(a) {
     return a ? (a ^ Math.random() * 16 >> a / 4).toString(16) : ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, getUUID);

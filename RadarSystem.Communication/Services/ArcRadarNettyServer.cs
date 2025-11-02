@@ -384,6 +384,9 @@ namespace RadarSystem.Communication.Services
             // 解析雷达信息
             var radarInfo = ParseRadarInfo(slaveId, deviceId, data);
 
+            // ✅ 发送设备上线状态
+            SendDeviceOnlineStatus(deviceId, slaveId, true);
+
             // 发送心跳到 MQTT
             SendHeartbeatToMqtt(deviceId);
 
@@ -392,6 +395,34 @@ namespace RadarSystem.Communication.Services
 
             // 响应心跳
             SendHeartbeatResponse(slaveId, context);
+        }
+        
+        /// <summary>
+        /// 发送设备在线状态（MQTT）
+        /// </summary>
+        private void SendDeviceOnlineStatus(string deviceId, string factoryId, bool isOnline)
+        {
+            try
+            {
+                var statusMessage = new
+                {
+                    deviceId = deviceId,
+                    factoryId = factoryId,
+                    status = isOnline ? "online" : "offline",
+                    timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                    type = "ArcRadar"
+                };
+
+                string json = JsonConvert.SerializeObject(statusMessage);
+                _mqttService.PublishAsync("/dev/device/status", json).Wait();
+                
+                Console.WriteLine($"[STATUS] Device {deviceId} (FactoryId={factoryId}): {(isOnline ? "ONLINE" : "OFFLINE")}");
+                _logger.LogInformation("设备状态更新: {DeviceId} - {Status}", deviceId, isOnline ? "在线" : "离线");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "发送设备状态失败（MQTT不可用）");
+            }
         }
 
         /// <summary>
@@ -842,6 +873,18 @@ namespace RadarSystem.Communication.Services
         /// </summary>
         internal void OnClientDisconnected(IChannelHandlerContext context)
         {
+            // ✅ 查找断开的设备并更新状态
+            var disconnectedDevice = _deviceChannelMap.FirstOrDefault(x => x.Value == context);
+            if (!disconnectedDevice.Equals(default(KeyValuePair<string, IChannelHandlerContext>)))
+            {
+                string deviceId = disconnectedDevice.Key;
+                var device = DeviceInfoCache.GetDevice(deviceId);
+                string factoryId = device?.FactoryId ?? deviceId;
+                
+                SendDeviceOnlineStatus(deviceId, factoryId, false);
+                _deviceChannelMap.TryRemove(deviceId, out _);
+            }
+            
             ClientDisconnected?.Invoke(this, new ClientDisconnectedEventArgs(context));
         }
 

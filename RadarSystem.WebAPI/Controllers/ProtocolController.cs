@@ -1911,6 +1911,53 @@ namespace RadarSystem.WebAPI.Controllers
                 return Ok(new { code = 500, message = $"查询失败: {ex.Message}" });
             }
         }
+
+        /// <summary>
+        /// 设置项目场景（相机位置）- 兼容旧接口
+        /// POST /api/protocol/set/project/view
+        /// </summary>
+        [HttpPost("set/project/view")]
+        [AllowAnonymous]
+        public async Task<IActionResult> SetProjectView([FromBody] JsonElement body)
+        {
+            try
+            {
+                var projectId = body.GetProperty("projectId").GetString();
+                
+                if (string.IsNullOrWhiteSpace(projectId))
+                {
+                    return Ok(new { code = 400, message = "项目ID不能为空" });
+                }
+
+                var project = await _dbContext.Projects.FirstOrDefaultAsync(p => p.ProjectId == projectId);
+                if (project == null)
+                {
+                    return Ok(new { code = 404, message = "项目不存在" });
+                }
+
+                // 从请求中获取场景参数
+                project.SceneLongitude = body.TryGetProperty("lon", out var lon) ? lon.GetDouble() : project.SceneLongitude;
+                project.SceneLatitude = body.TryGetProperty("lat", out var lat) ? lat.GetDouble() : project.SceneLatitude;
+                project.SceneHeight = body.TryGetProperty("alt", out var alt) ? alt.GetDouble() : project.SceneHeight;
+                project.SceneHeading = body.TryGetProperty("heading", out var heading) ? heading.GetDouble() : project.SceneHeading;
+                project.ScenePitch = body.TryGetProperty("pitch", out var pitch) ? pitch.GetDouble() : project.ScenePitch;
+                project.SceneRoll = body.TryGetProperty("roll", out var roll) ? roll.GetDouble() : project.SceneRoll;
+                project.UpdateTime = DateTime.Now;
+
+                await _dbContext.SaveChangesAsync();
+
+                _logger.LogInformation("项目场景已保存: {ProjectId}, Lon={Lon}, Lat={Lat}, Height={Height}", 
+                    projectId, project.SceneLongitude, project.SceneLatitude, project.SceneHeight);
+                Console.WriteLine($"[场景保存] ProjectId={projectId}, Lon={project.SceneLongitude:F6}, Lat={project.SceneLatitude:F6}, Height={project.SceneHeight:F2}");
+
+                return Ok(new { code = 200, message = "场景保存成功", data = "场景已保存" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "保存项目场景失败");
+                return Ok(new { code = 500, message = $"保存失败: {ex.Message}" });
+            }
+        }
     }
 }
 

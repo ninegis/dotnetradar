@@ -59,22 +59,9 @@ public class WebSocketMiddleware
         
         try
         {
-            // 发送欢迎消息
-            if (webSocket.State == WebSocketState.Open)
-            {
-                var welcome = Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(new
-                {
-                    type = "welcome",
-                    message = "WebSocket连接成功",
-                    timestamp = DateTime.Now
-                }));
-                await webSocket.SendAsync(
-                    new ArraySegment<byte>(welcome), 
-                    WebSocketMessageType.Text, 
-                    true, 
-                    cts.Token);
-            }
-
+            // ✅ 不发送欢迎消息（MQTT客户端不期望）
+            // MQTT over WebSocket客户端会自己发送CONNECT包
+            
             while (webSocket.State == WebSocketState.Open)
             {
                 try
@@ -95,12 +82,12 @@ public class WebSocketMiddleware
                         }
                         break;
                     }
-                    else if (result.MessageType == WebSocketMessageType.Text)
+                    else if (result.MessageType == WebSocketMessageType.Text || result.MessageType == WebSocketMessageType.Binary)
                     {
-                        var message = Encoding.UTF8.GetString(buffer, 0, result.Count);
-                        _logger.LogDebug("收到WebSocket消息: {Message}", message);
+                        // ✅ 处理MQTT消息（可能是文本或二进制）
+                        _logger.LogDebug("收到消息: {Type}, 长度: {Length}", result.MessageType, result.Count);
                         
-                        // 回显消息（测试用）
+                        // MQTT协议处理（暂时简单回显）
                         if (webSocket.State == WebSocketState.Open)
                         {
                             await webSocket.SendAsync(
