@@ -76,6 +76,7 @@ node_modules/
 
 # 编译输出
 dist/
+Deploy/
 dist-ssr/
 *.local
 
