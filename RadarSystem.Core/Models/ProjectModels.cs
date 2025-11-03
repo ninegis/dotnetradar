@@ -68,7 +68,7 @@ namespace RadarSystem.Core.Models
         public string MqttTopic { get; set; } = string.Empty;
         
         // 雷达特有信息
-        public string FactoryId { get; set; } = string.Empty;  // 出厂ID
+        public string SlaveId { get; set; } = string.Empty;  // 出厂ID
         public double Orientation { get; set; }  // 零点朝向（度）
         
         // 雷达参数（前端需要）
@@ -157,7 +157,7 @@ namespace RadarSystem.Core.Models
         public string MqttTopic { get; set; } = string.Empty;
         
         // 雷达特有信息
-        public string FactoryId { get; set; } = string.Empty;  // 出厂ID
+        public string SlaveId { get; set; } = string.Empty;  // 出厂ID
         public double Orientation { get; set; }  // 零点朝向（度）
         
         public string Description { get; set; } = string.Empty;

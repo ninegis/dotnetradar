@@ -70,7 +70,7 @@ namespace RadarSystem.WebAPI.Controllers
                         Longitude = d.Longitude,
                         Latitude = d.Latitude,
                         Elevation = d.Elevation,
-                        FactoryId = d.FactoryId,
+                        SlaveId = d.SlaveId,
                         Orientation = d.Orientation,
                         Description = d.Description,
                         LastUpdateTime = d.LastUpdateTime,
@@ -170,11 +170,21 @@ namespace RadarSystem.WebAPI.Controllers
         {
             try
             {
-                // 检查设备ID是否已存在
+                // ✅ 检查DeviceId是否已存在（唯一性约束）
                 var exists = await _dbContext.Devices.AnyAsync(d => d.DeviceId == request.DeviceId);
                 if (exists)
                 {
                     return Ok(ApiResponse<int>.Fail(400, $"设备ID '{request.DeviceId}' 已存在"));
+                }
+
+                // ✅ 检查SlaveId是否已存在（唯一性约束）
+                if (!string.IsNullOrEmpty(request.SlaveId))
+                {
+                    var slaveIdExists = await _dbContext.Devices.AnyAsync(d => d.SlaveId == request.SlaveId);
+                    if (slaveIdExists)
+                    {
+                        return Ok(ApiResponse<int>.Fail(400, $"SlaveId '{request.SlaveId}' 已存在，请使用不同的SlaveId"));
+                    }
                 }
 
                 // 检查项目是否存在
@@ -196,7 +206,7 @@ namespace RadarSystem.WebAPI.Controllers
                     Longitude = request.Longitude,
                     Latitude = request.Latitude,
                     Elevation = request.Elevation,
-                    FactoryId = request.FactoryId ?? string.Empty,
+                    SlaveId = request.SlaveId ?? string.Empty,
                     Orientation = request.Orientation,
                     Description = request.Description,
                     LastUpdateTime = DateTime.Now,
@@ -231,6 +241,15 @@ namespace RadarSystem.WebAPI.Controllers
                     return Ok(ApiResponse<bool>.Fail(404, "设备不存在"));
                 }
 
+                // ✅ 检查SlaveId是否与其他设备冲突（唯一性约束）
+                if (!string.IsNullOrEmpty(device.SlaveId) && device.SlaveId != entity.SlaveId)
+                {
+                    if (await _dbContext.Devices.AnyAsync(d => d.SlaveId == device.SlaveId && d.DeviceId != id))
+                    {
+                        return Ok(ApiResponse<bool>.Fail(400, $"SlaveId={device.SlaveId}已被其他设备使用，请使用不同的SlaveId"));
+                    }
+                }
+
                 entity.DeviceName = device.DeviceName;
                 entity.DeviceType = device.DeviceType;
                 entity.Status = device.Status;
@@ -239,7 +258,7 @@ namespace RadarSystem.WebAPI.Controllers
                 entity.Longitude = device.Longitude;
                 entity.Latitude = device.Latitude;
                 entity.Elevation = device.Elevation;
-                entity.FactoryId = device.FactoryId;
+                entity.SlaveId = device.SlaveId;
                 entity.Orientation = device.Orientation;
                 entity.Description = device.Description;
                 entity.LastUpdateTime = DateTime.Now;

@@ -72,11 +72,12 @@ if errorlevel 1 (
 )
 echo [OK] Frontend build successful
 
-REM [3/4] Deploy to wwwroot
+REM [3/4] Deploy to wwwroot (both development and Deploy)
 echo.
 echo [3/4] Deploying to wwwroot...
 cd /d "%SCRIPT_DIR%"
 set "WWWROOT_DIR=%SCRIPT_DIR%\RadarSystem.WebAPI\wwwroot"
+set "DEPLOY_WWWROOT_DIR=%SCRIPT_DIR%\Deploy\wwwroot"
 set "DIST_DIR=%FRONTEND_DIR%\dist"
 
 if not exist "%DIST_DIR%" (
@@ -86,98 +87,45 @@ if not exist "%DIST_DIR%" (
     exit /b 1
 )
 
+REM Deploy to development wwwroot
 if exist "%WWWROOT_DIR%" (
     echo [INFO] Cleaning old wwwroot directory...
     rd /s /q "%WWWROOT_DIR%" 2>nul
 )
-
-echo [INFO] Copying files to wwwroot...
+echo [INFO] Copying files to development wwwroot...
 if not exist "%WWWROOT_DIR%" mkdir "%WWWROOT_DIR%"
 xcopy /E /I /Y "%DIST_DIR%\*" "%WWWROOT_DIR%\" >nul 2>&1
 if errorlevel 1 (
-    echo [ERROR] Deployment failed
-    echo Please check file permissions or disk space
+    echo [ERROR] Development deployment failed
     pause
     exit /b 1
 )
-echo [OK] Deployment completed
+echo [OK] Development wwwroot deployment completed
 
-REM [4/5] Build backend
-echo.
-echo [4/5] Building backend project...
-set "BACKEND_DIR=%SCRIPT_DIR%\RadarSystem.WebAPI"
-cd /d "%BACKEND_DIR%"
+REM Deploy to Deploy/wwwroot
+if exist "%DEPLOY_WWWROOT_DIR%" (
+    echo [INFO] Cleaning old Deploy wwwroot directory...
+    rd /s /q "%DEPLOY_WWWROOT_DIR%" 2>nul
+)
+echo [INFO] Copying files to Deploy/wwwroot...
+if not exist "%DEPLOY_WWWROOT_DIR%" mkdir "%DEPLOY_WWWROOT_DIR%"
+xcopy /E /I /Y "%DIST_DIR%\*" "%DEPLOY_WWWROOT_DIR%\" >nul 2>&1
 if errorlevel 1 (
-    echo [ERROR] Cannot change to backend directory
-    pause
-    exit /b 1
-)
-
-echo [INFO] Running dotnet build...
-dotnet build --configuration Release --verbosity minimal
-if errorlevel 1 (
-    echo [ERROR] Backend build failed
-    echo Please check the error messages above
-    pause
-    exit /b 1
-)
-echo [OK] Backend build successful
-
-REM [5/5] Start system service
-echo.
-echo [5/5] Starting system service...
-
-REM Check if ports are in use
-netstat -ano | findstr ":6098" >nul 2>&1
-if not errorlevel 1 (
-    echo [WARN] Port 6098 is in use, trying to stop existing process...
-    for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":6098" ^| findstr "LISTENING"') do (
-        taskkill /F /PID %%a >nul 2>&1
-    )
-    timeout /t 2 /nobreak >nul
-)
-
-netstat -ano | findstr ":8099" >nul 2>&1
-if not errorlevel 1 (
-    echo [WARN] Port 8099 is in use, trying to stop existing process...
-    for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":8099" ^| findstr "LISTENING"') do (
-        taskkill /F /PID %%a >nul 2>&1
-    )
-    timeout /t 2 /nobreak >nul
+    echo [WARN] Deploy wwwroot deployment failed (may not exist yet)
+) else (
+    echo [OK] Deploy wwwroot deployment completed
 )
 
 echo.
 echo ========================================
-echo    System Starting...
+echo    Frontend Build Complete
 echo ========================================
 echo.
-echo Access URLs:
-echo    Frontend: http://localhost:6098
-echo    API:      http://localhost:8099
-echo    Swagger:  http://localhost:8099/swagger
+echo Deployment completed to:
+echo   - RadarSystem.WebAPI\wwwroot (Development)
+echo   - Deploy\wwwroot (Production)
 echo.
-echo Default Account:
-echo    Username: admin
-echo    Password: admin123
-echo.
-echo Press Ctrl+C to stop the service
-echo.
-echo ========================================
-echo    System Running...
-echo ========================================
-echo.
-
-REM Wait 2 seconds then open browser
-timeout /t 2 /nobreak >nul
-start "" "http://localhost:6098"
-
-REM Start application
-dotnet run --configuration Release --no-build --urls "http://localhost:8099"
-
-REM If program exits, show message
-echo.
-echo ========================================
-echo    System Stopped
-echo ========================================
+echo To deploy full system to Deploy directory:
+echo   Run: 部署到Deploy.bat
 echo.
 pause

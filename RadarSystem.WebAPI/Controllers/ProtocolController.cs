@@ -373,7 +373,7 @@ namespace RadarSystem.WebAPI.Controllers
                 if (body.TryGetProperty("name", out var name))
                     device.DeviceName = name.GetString() ?? device.DeviceName;
                 if (body.TryGetProperty("factoryId", out var factoryId))
-                    device.FactoryId = factoryId.GetString() ?? device.FactoryId;
+                    device.SlaveId = factoryId.GetString() ?? device.SlaveId;
                 if (body.TryGetProperty("longitude", out var longitude))
                     device.Longitude = longitude.GetDouble();
                 if (body.TryGetProperty("latitude", out var latitude))
@@ -473,7 +473,7 @@ namespace RadarSystem.WebAPI.Controllers
                 if (body.TryGetProperty("name", out var name))
                     device.DeviceName = name.GetString() ?? device.DeviceName;
                 if (body.TryGetProperty("factoryId", out var factoryId))
-                    device.FactoryId = factoryId.GetString() ?? device.FactoryId;
+                    device.SlaveId = factoryId.GetString() ?? device.SlaveId;
                 if (body.TryGetProperty("longitude", out var longitude))
                     device.Longitude = longitude.GetDouble();
                 if (body.TryGetProperty("latitude", out var latitude))

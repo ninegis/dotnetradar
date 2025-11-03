@@ -71,6 +71,8 @@ export const useMapStore = defineStore("sloperadarControl", {
             alarmContactInfo: {},
             Layers: {},
             deviceOnlineStatus: {},
+            deviceHeartbeatTimestamps: {}, // ✅ 设备心跳时间戳记录 {deviceId: timestamp}
+            heartbeatCheckInterval: null, // ✅ 心跳检测定时器
             layerCheckedKeys: [],
             layerList: [],
             layerOid: null,
@@ -100,12 +102,45 @@ export const useMapStore = defineStore("sloperadarControl", {
     actions: {
         componentSlotDestroy() {
             this.toolbarcontent = '';
+            // ✅ 组件销毁时停止心跳检测
+            this.stopHeartbeatCheck();
         },
         startRadarMQTT() {
+            // ✅ 如果已有连接，先断开
+            if (this.client) {
+                try {
+                    this.client.end();
+                    this.client = null;
+                } catch (e) {
+                    console.warn('[MQTT] 断开旧连接失败:', e);
+                }
+            }
+            
             // 动态获取WebSocket地址
-            const wsUrl = 'ws://' + window.location.hostname + ':8083/mqtt';  // EMQX
-            console.log('[WebSocket] 连接地址:', wsUrl);
-            this.client = mqtt.connect(wsUrl, this.options);
+            const hostname = window.location.hostname;
+            const wsUrl = `ws://${hostname}:8083/mqtt`;  // EMQX WebSocket
+            
+            console.log('[MQTT] 开始连接:', wsUrl);
+            
+            // ✅ MQTT连接选项
+            const clientId = 'radar-frontend-' + Math.random().toString(16).substr(2, 8);
+            const mqttOptions = {
+                clientId: clientId,
+                keepalive: 60, // 60秒心跳
+                connectTimeout: 10000, // 10秒连接超时
+                reconnectPeriod: 5000, // 5秒重连间隔
+                clean: true,
+                protocolVersion: 4, // MQTT 3.1.1
+                rejectUnauthorized: false, // 允许自签名证书
+                will: {
+                    topic: '/dev/frontend/status',
+                    payload: JSON.stringify({ status: 'offline', clientId: clientId }),
+                    qos: 1,
+                    retain: false
+                }
+            };
+            
+            this.client = mqtt.connect(wsUrl, mqttOptions);
 
             let that = this;
             const heartbeatEvent = () => {
@@ -116,15 +151,43 @@ export const useMapStore = defineStore("sloperadarControl", {
                     })
                 }
             }
+            
+            // ✅ 保存clientId供回调使用
+            const savedClientId = clientId;
+            
             this.client.on('connect', (e) => {
-                console.log('[MQTT] 已连接到EMQX');
-                this.client.subscribe('/dev/device/status', {}, (error) => { });  // ✅ 订阅设备状态
-                this.client.subscribe('/dev/radar/mimoLite/defo/command', {}, (error) => { });
-                this.client.subscribe('/dev/radar/mimo/defo/command/reponse', {}, (error) => { });
-                this.client.subscribe('/dev/radar/mimoLite/defo/command', {}, (error) => { });
-                this.client.subscribe('/dev/radar/defo/nAlgorithmParam', {}, (error) => { });
-                this.client.subscribe('/dev/image', {}, (error) => { });
-                this.client.subscribe('/dev/real/online', {}, (error) => { });
+                console.log('[MQTT] ✅ 已连接到EMQX', e);
+                
+                // ✅ 订阅所有需要的主题
+                const topics = [
+                    '/dev/device/status',           // 设备状态
+                    '/dev/radar/mimoLite/defo/command',
+                    '/dev/radar/mimo/defo/command/reponse',
+                    '/dev/radar/defo/nAlgorithmParam',
+                    '/dev/image',
+                    '/dev/real/online'
+                ];
+                
+                topics.forEach(topic => {
+                    this.client.subscribe(topic, { qos: 1 }, (error) => {
+                        if (error) {
+                            console.error(`[MQTT] 订阅失败 [${topic}]:`, error);
+                        } else {
+                            console.log(`[MQTT] ✅ 已订阅 [${topic}]`);
+                        }
+                    });
+                });
+                
+                // ✅ 发布前端上线状态
+                this.client.publish('/dev/frontend/status', JSON.stringify({
+                    status: 'online',
+                    clientId: savedClientId,
+                    timestamp: new Date().toISOString()
+                }), { qos: 1 });
+                
+                // ✅ 启动30秒心跳检测
+                this.startHeartbeatCheck();
+                
                 if (that.sysinfo.config.radarHeart !== 0) {
                     setTimeout(() => {
                         heartbeatEvent();
@@ -183,13 +246,34 @@ export const useMapStore = defineStore("sloperadarControl", {
                     }
                 }
             })
-            // 断开发起重连
-            this.client.on('reconnect', (error) => {
-                console.log('正在重连:', error)
-            })
-            // 链接异常处理
+            // ✅ 连接错误处理
             this.client.on('error', (error) => {
-                console.log('连接失败:', error)
+                console.error('[MQTT] ❌ 连接错误:', error);
+                if (error.message && error.message.includes('timeout')) {
+                    console.warn('[MQTT] 连接超时，请检查EMQX是否运行在端口8083');
+                }
+            })
+            
+            // ✅ 正在重连
+            this.client.on('reconnect', () => {
+                console.log('[MQTT] 🔄 正在重连...');
+            })
+            
+            // ✅ 断开连接时停止心跳检测
+            this.client.on('close', () => {
+                console.log('[MQTT] ⚠️ 连接已关闭');
+                this.stopHeartbeatCheck();
+            })
+            
+            this.client.on('offline', () => {
+                console.log('[MQTT] ⚠️ 连接已离线');
+                this.stopHeartbeatCheck();
+            })
+            
+            // ✅ 连接结束
+            this.client.on('end', () => {
+                console.log('[MQTT] 🔚 连接已结束');
+                this.stopHeartbeatCheck();
             })
         },
         // ✅ 加载项目场景并定位
@@ -301,45 +385,141 @@ export const useMapStore = defineStore("sloperadarControl", {
         
         // ✅ 更新设备在线状态
         updateDeviceOnlineStatus(statusData) {
-            const { deviceId, factoryId, status, timestamp } = statusData;
+            const { deviceId, slaveId, status, timestamp } = statusData;
             
-            console.log('[MQTT收到设备状态]', statusData);
+            // ✅ 使用时间戳（如果有）或当前时间
+            const heartbeatTime = timestamp ? new Date(timestamp).getTime() : Date.now();
             
-            // 查找设备并更新状态（支持多种匹配方式）
-            let device = this.projectData.deviceData.find(d => d.deviceId === deviceId);
+            console.log('[MQTT收到设备状态]', statusData, '心跳时间:', new Date(heartbeatTime).toLocaleString());
             
-            if (!device && factoryId) {
-                // 尝试通过factoryId查找
-                device = this.projectData.deviceData.find(d => d.factoryId === factoryId);
-            }
+            // ✅ 在所有项目的设备中查找（遍历projectData）
+            let device = null;
+            let foundProject = null;
             
-            if (!device) {
-                // 尝试通过设备ID的不同格式查找
-                device = this.projectData.deviceData.find(d => 
-                    d.id === deviceId || d.id === factoryId
-                );
+            for (const project of this.projectInfo.projectData) {
+                if (!project.devices || project.devices.length === 0) continue;
+                
+                // 优先通过deviceId查找
+                device = project.devices.find(d => d.deviceId === deviceId);
+                
+                if (!device && slaveId) {
+                    // 尝试通过slaveId查找
+                    device = project.devices.find(d => d.slaveId === slaveId);
+                }
+                
+                if (!device) {
+                    // 尝试通过设备ID的不同格式查找
+                    device = project.devices.find(d => 
+                        d.id === deviceId || d.id === slaveId
+                    );
+                }
+                
+                if (device) {
+                    foundProject = project;
+                    break;
+                }
             }
             
             if (device) {
+                // ✅ 记录心跳时间戳
+                const key = deviceId || slaveId || device.id;
+                this.deviceHeartbeatTimestamps[key] = heartbeatTime;
+                
                 // 更新状态（兼容不同字段名）
-                if (device.status !== undefined) device.status = status;
-                if (device.online !== undefined) device.online = status === 'online';
-                if (device.lastHeartbeat !== undefined) device.lastHeartbeat = timestamp;
+                const isOnline = status === 'online' || status === true;
+                if (device.status !== undefined) device.status = isOnline ? 'online' : 'offline';
+                if (device.online !== undefined) device.online = isOnline;
+                if (device.lastHeartbeat !== undefined) device.lastHeartbeat = heartbeatTime;
                 
-                console.log(`[设备状态更新成功] ${device.deviceName || deviceId}: ${status}`);
-                
-                // 显示通知
-                if (status === 'online') {
-                    showMessage(`设备上线: ${device.deviceName || deviceId}`, 'success');
-                } else {
-                    showMessage(`设备离线: ${device.deviceName || deviceId}`, 'warning');
-                }
+                console.log(`[设备状态更新] ${device.deviceName || deviceId}: ${isOnline ? '在线' : '离线'}`, {
+                    deviceId,
+                    slaveId,
+                    status,
+                    heartbeatTime: new Date(heartbeatTime).toLocaleString()
+                });
                 
                 // 强制更新视图
-                this.projectData = {...this.projectData};
+                this.projectInfo.projectData = [...this.projectInfo.projectData];
             } else {
-                console.warn('[设备状态] 未找到设备:', deviceId, factoryId);
-                console.log('[当前设备列表]', this.projectData.deviceData.map(d => ({id: d.id, deviceId: d.deviceId, factoryId: d.factoryId})));
+                console.warn('[设备状态] 未找到设备:', deviceId, slaveId);
+            }
+        },
+        
+        // ✅ 启动30秒心跳检测
+        startHeartbeatCheck() {
+            // 清除旧的定时器
+            if (this.heartbeatCheckInterval) {
+                clearInterval(this.heartbeatCheckInterval);
+            }
+            
+            const HEARTBEAT_TIMEOUT = 30 * 1000; // 30秒超时
+            
+            this.heartbeatCheckInterval = setInterval(() => {
+                const now = Date.now();
+                let hasChanges = false;
+                
+                // ✅ 遍历所有项目的所有设备
+                for (const project of this.projectInfo.projectData) {
+                    if (!project.devices || project.devices.length === 0) continue;
+                    
+                    for (const device of project.devices) {
+                        const key = device.deviceId || device.id || device.slaveId;
+                        if (!key) continue;
+                        
+                        const lastHeartbeat = this.deviceHeartbeatTimestamps[key];
+                        
+                        if (lastHeartbeat) {
+                            const timeSinceHeartbeat = now - lastHeartbeat;
+                            
+                            // ✅ 如果超过30秒没有心跳，标记为离线
+                            if (timeSinceHeartbeat > HEARTBEAT_TIMEOUT) {
+                                const wasOnline = device.status === 'online' || device.online === true;
+                                
+                                if (wasOnline) {
+                                    device.status = 'offline';
+                                    device.online = false;
+                                    hasChanges = true;
+                                    
+                                    console.log(`[心跳检测] 设备超时离线: ${device.deviceName || key}`, {
+                                        lastHeartbeat: new Date(lastHeartbeat).toLocaleString(),
+                                        timeout: Math.round(timeSinceHeartbeat / 1000) + '秒'
+                                    });
+                                }
+                            } else {
+                                // ✅ 如果在线但在30秒内有心跳，确保状态是在线
+                                const shouldBeOnline = device.status !== 'offline';
+                                if (shouldBeOnline && (device.status !== 'online' || device.online !== true)) {
+                                    device.status = 'online';
+                                    device.online = true;
+                                    hasChanges = true;
+                                }
+                            }
+                        } else {
+                            // ✅ 没有心跳记录，默认离线
+                            if (device.status === 'online' || device.online === true) {
+                                device.status = 'offline';
+                                device.online = false;
+                                hasChanges = true;
+                            }
+                        }
+                    }
+                }
+                
+                // ✅ 如果有变化，强制更新视图
+                if (hasChanges) {
+                    this.projectInfo.projectData = [...this.projectInfo.projectData];
+                }
+            }, 30000); // 每30秒检查一次
+            
+            console.log('[心跳检测] 已启动，每30秒检查一次设备心跳状态');
+        },
+        
+        // ✅ 停止心跳检测
+        stopHeartbeatCheck() {
+            if (this.heartbeatCheckInterval) {
+                clearInterval(this.heartbeatCheckInterval);
+                this.heartbeatCheckInterval = null;
+                console.log('[心跳检测] 已停止');
             }
         }
     }

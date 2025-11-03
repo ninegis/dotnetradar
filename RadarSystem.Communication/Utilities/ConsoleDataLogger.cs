@@ -25,7 +25,7 @@ namespace RadarSystem.Communication.Utilities
             Console.WriteLine($"【{deviceType}数据接收】");
             Console.WriteLine($"  时间: {timestamp}");
             Console.WriteLine($"  端口: {port}");
-            Console.WriteLine($"  唯一值(FactoryId/SlaveId): {factoryId}");
+            Console.WriteLine($"  唯一值(SlaveId/SlaveId): {factoryId}");
             Console.WriteLine($"  命令代码: {command}");
             Console.WriteLine($"  数据长度: {dataLength:N0} 字节 ({dataLength / 1024.0:F2} KB)");
             
@@ -41,7 +41,7 @@ namespace RadarSystem.Communication.Utilities
             
             if (!string.IsNullOrEmpty(deviceId))
             {
-                Console.WriteLine($"  设备映射: FactoryId({factoryId}) → DeviceId({deviceId})");
+                Console.WriteLine($"  设备映射: SlaveId({factoryId}) → DeviceId({deviceId})");
             }
             
             Console.WriteLine("================================================================================");
@@ -67,7 +67,7 @@ namespace RadarSystem.Communication.Utilities
             Console.WriteLine($"【{deviceType}文件保存】");
             Console.WriteLine($"  时间: {timestamp}");
             Console.WriteLine($"  设备ID: {deviceId}");
-            Console.WriteLine($"  FactoryId: {factoryId}");
+            Console.WriteLine($"  SlaveId: {factoryId}");
             Console.WriteLine($"  数据类型: {typeName} ({dataType})");
             Console.WriteLine($"  文件路径: {filePath}");
             Console.WriteLine($"  文件大小: {fileSize / 1024.0:F2} KB");
@@ -140,7 +140,7 @@ namespace RadarSystem.Communication.Utilities
                 Console.WriteLine($"  映射列表:");
                 foreach (var mapping in mappings.Take(10))  // 只显示前10个
                 {
-                    Console.WriteLine($"    FactoryId({mapping.Key}) → DeviceId({mapping.Value})");
+                    Console.WriteLine($"    SlaveId({mapping.Key}) → DeviceId({mapping.Value})");
                 }
                 if (mappings.Count > 10)
                 {
@@ -161,7 +161,7 @@ namespace RadarSystem.Communication.Utilities
             string? ipAddress = null)
         {
             Console.ForegroundColor = ConsoleColor.DarkGray;
-            Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] 💓 {deviceType} 心跳 - FactoryId:{factoryId} DeviceId:{deviceId}{(ipAddress != null ? $" IP:{ipAddress}" : "")}");
+            Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] 💓 {deviceType} 心跳 - SlaveId:{factoryId} DeviceId:{deviceId}{(ipAddress != null ? $" IP:{ipAddress}" : "")}");
             Console.ResetColor();
         }
     }

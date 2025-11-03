@@ -261,7 +261,7 @@ namespace RadarSystem.Data.Models
 
         // ✅ 雷达特有信息
         [StringLength(50)]
-        public string FactoryId { get; set; } = string.Empty;  // 出厂ID
+        public string SlaveId { get; set; } = string.Empty;  // ✅ 出厂ID/从机ID（原FactoryId）
         
         public double Orientation { get; set; }  // 零点朝向（度）
 

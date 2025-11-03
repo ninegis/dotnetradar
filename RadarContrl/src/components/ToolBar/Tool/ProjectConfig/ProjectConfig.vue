@@ -283,7 +283,7 @@ const commitUpdate = async ()=>{
                 longitude: d.longitude || 0,
                 latitude: d.latitude || 0,
                 elevation: d.elevation || 0,
-                factoryId: d.factoryId || '',
+                slaveId: d.slaveId || '',
                 orientation: d.orientation || 0,
                 ipAddress: d.ipAddress,
                 port: d.port,
@@ -341,7 +341,7 @@ const setCamera=()=>{
     isSavingScene = false;
     console.log('[场景保存] 保存成功:', res.data);
     if (res.data && (res.data.code === 200 || res.data.success)) {
-      showMessage(t('common.setSuccess'));
+    showMessage(t('common.setSuccess'));
       // ✅ 更新store中的场景信息
       const project = store.projectInfo.projectData.find(p => p.projectId === store.radarInfo.projectId);
       if (project) {
@@ -411,7 +411,7 @@ onMounted(async () => {
               longitude: d.longitude || 0,
               latitude: d.latitude || 0,
               elevation: d.elevation || 0,
-              factoryId: d.factoryId || '',
+              slaveId: d.slaveId || '',
               orientation: d.orientation || 0,
               ipAddress: d.ipAddress,
               port: d.port,

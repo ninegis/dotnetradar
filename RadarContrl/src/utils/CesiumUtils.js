@@ -98,8 +98,7 @@ export class CesiumUtils{
     }
     static CesiumInit(){
         return new Promise(resolve => {
-            // window.CESIUM_BASE_URL = './node_modules/cesium/Build/Cesium/';
-            // window.CESIUM_BASE_URL = './assets/Cesium/';
+            // ✅ 部署环境：CESIUM_BASE_URL已在index.html中设置为 './Cesium'
             Camera.DEFAULT_VIEW_RECTANGLE = Rectangle.fromDegrees(90, -20, 110, 90);//缩放至大陆地球
             Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI4YzQ3NDAyOS0wNWNkLTRkOTItOTkzNS0yNGEzMTVjOGI2ZjEiLCJpZCI6MzA3MDg2LCJpYXQiOjE3NDg0MjU5ODR9.SUMizikOCj3aEzADHtjCAvJcT5LMNiDElx9G8bUntS0';
             //地球初始化

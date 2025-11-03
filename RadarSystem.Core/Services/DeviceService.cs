@@ -85,7 +85,7 @@ namespace RadarSystem.Core.Services
                     Port = request.Port,
                     MqttTopic = request.MqttTopic,
                     // 雷达特有信息
-                    FactoryId = request.FactoryId,
+                    SlaveId = request.SlaveId,
                     Orientation = request.Orientation,
                     Description = request.Description,
                     LastUpdateTime = DateTime.Now,

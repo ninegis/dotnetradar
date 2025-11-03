@@ -63,8 +63,8 @@
             <el-form-item :label="$t('backend.deviceName')">
               <el-input v-model="store.radarInfo.deviceName" />
             </el-form-item>
-            <el-form-item :label="$t('backend.factoryId')">
-              <el-input v-model="currentDevice.factoryId" placeholder="设备出厂ID"/>
+            <el-form-item :label="$t('backend.slaveId')">
+              <el-input v-model="currentDevice.slaveId" placeholder="设备出厂ID"/>
             </el-form-item>
             <el-form-item :label="$t('common.longitude')">
               <el-col :span="20">
@@ -219,7 +219,7 @@ const computeOriAngleVisible = ref(false);
 
 // ✅ 当前设备信息（用于表单绑定）
 const currentDevice = reactive({
-  factoryId: '',
+  slaveId: '',
   longitude: 0,
   latitude: 0,
   elevation: 0,
@@ -243,7 +243,7 @@ const currentProjectDevices = computed(() => {
       deviceId: devices[0].deviceId,
       name: devices[0].name,
       deviceName: devices[0].deviceName,
-      factoryId: devices[0].factoryId,
+      slaveId: devices[0].slaveId,
       longitude: devices[0].longitude,
       params: devices[0].params
     } : null
@@ -427,7 +427,7 @@ const onProjectChange = () => {
             longitude: d.longitude || 0,
             latitude: d.latitude || 0,
             elevation: d.elevation || 0,
-            factoryId: d.factoryId || '',
+            slaveId: d.slaveId || '',
             orientation: d.orientation || 0,
             ipAddress: d.ipAddress,
             port: d.port,
@@ -462,7 +462,7 @@ const onProjectChange = () => {
         console.warn('当前项目没有设备');
         store.radarInfo.deviceId = null;
         store.radarInfo.deviceName = '';
-        currentDevice.factoryId = '';
+        currentDevice.slaveId = '';
         currentDevice.longitude = 0;
         currentDevice.latitude = 0;
         currentDevice.elevation = 0;
@@ -498,14 +498,14 @@ const selectOnChange = (e) => {
   console.log('设备类型:', device.type, 'currentRadar.value:', currentRadar.value);
   
   // ✅ 加载设备的独立字段到表单
-  currentDevice.factoryId = device.factoryId || '';
+  currentDevice.slaveId = device.slaveId || '';
   currentDevice.longitude = device.longitude || device.coordinates?.[0] || 0;
   currentDevice.latitude = device.latitude || device.coordinates?.[1] || 0;
   currentDevice.elevation = device.elevation || device.coordinates?.[2] || 0;
   currentDevice.orientation = device.orientation || store.radarInfo.params['radarOri'] || 0;
   
   console.log('加载的设备信息:', {
-    factoryId: currentDevice.factoryId,
+    slaveId: currentDevice.slaveId,
     longitude: currentDevice.longitude,
     latitude: currentDevice.latitude,
     elevation: currentDevice.elevation,
@@ -588,7 +588,7 @@ const saveBasicInfo = async () => {
     projectId: store.radarInfo.projectId,
     deviceId: store.radarInfo.deviceId,
     deviceName: store.radarInfo.deviceName,  // ✅ 使用deviceName
-    factoryId: currentDevice.factoryId || '',
+    slaveId: currentDevice.slaveId || '',
     longitude: currentDevice.longitude,
     latitude: currentDevice.latitude,
     elevation: currentDevice.elevation,  // ✅ 使用elevation
@@ -624,7 +624,7 @@ const saveBasicInfo = async () => {
             longitude: d.longitude || 0,
             latitude: d.latitude || 0,
             elevation: d.elevation || 0,
-            factoryId: d.factoryId || '',
+            slaveId: d.slaveId || '',
             orientation: d.orientation || 0,
             ipAddress: d.ipAddress,
             port: d.port,
@@ -726,7 +726,7 @@ const sendRadarParams = async () => {
               longitude: d.longitude || 0,
               latitude: d.latitude || 0,
               elevation: d.elevation || 0,
-              factoryId: d.factoryId || '',
+              slaveId: d.slaveId || '',
               orientation: d.orientation || 0,
               ipAddress: d.ipAddress,
               port: d.port,
@@ -813,7 +813,7 @@ onMounted(async () => {
               longitude: d.longitude || 0,
               latitude: d.latitude || 0,
               elevation: d.elevation || 0,
-              factoryId: d.factoryId || '',
+              slaveId: d.slaveId || '',
               orientation: d.orientation || 0,
               ipAddress: d.ipAddress,
               port: d.port,

@@ -108,7 +108,7 @@ onMounted(()=>{
                     longitude: d.longitude || 0,
                     latitude: d.latitude || 0,
                     elevation: d.elevation || 0,
-                    factoryId: d.factoryId || '',
+                    slaveId: d.slaveId || '',
                     orientation: d.orientation || 0,
                     ipAddress: d.ipAddress,
                     port: d.port,

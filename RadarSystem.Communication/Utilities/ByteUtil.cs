@@ -61,6 +61,43 @@ namespace RadarSystem.Communication.Utilities
         }
 
         /// <summary>
+        /// 从字节数组中提取整数（小端序）- 对应Java ByteUtil.toInt()
+        /// </summary>
+        public static int ToIntLittleEndian(byte[] data, int startIndex, int endIndex)
+        {
+            if (data == null || startIndex < 0 || endIndex >= data.Length || startIndex > endIndex)
+                return 0;
+
+            // ✅ 参考Java: ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).getInt()
+            int byteCount = endIndex - startIndex + 1;
+            byte[] bytes = new byte[byteCount];
+            for (int i = 0; i < byteCount; i++)
+            {
+                bytes[i] = data[startIndex + i];
+            }
+            
+            // ✅ 小端序解析
+            if (byteCount == 4)
+            {
+                return BitConverter.ToInt32(bytes, 0);
+            }
+            else if (byteCount == 2)
+            {
+                return BitConverter.ToInt16(bytes, 0);
+            }
+            else
+            {
+                // 大端序解析（默认）
+                int result = 0;
+                for (int i = 0; i < byteCount; i++)
+                {
+                    result = (result << 8) | (bytes[i] & 0xFF);
+                }
+                return result;
+            }
+        }
+
+        /// <summary>
         /// 整数转十六进制字符串
         /// </summary>
         public static string IntToHexString(int value, int byteCount)

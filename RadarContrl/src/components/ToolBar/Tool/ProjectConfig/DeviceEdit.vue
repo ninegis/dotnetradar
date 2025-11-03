@@ -52,7 +52,7 @@
             <el-divider>雷达特有信息</el-divider>
             
             <el-form-item label="出厂ID">
-              <el-input v-model="form.factoryId" placeholder="出厂ID"/>
+              <el-input v-model="form.slaveId" placeholder="出厂ID"/>
             </el-form-item>
             
             <el-form-item label="零点朝向(度)">
@@ -150,7 +150,7 @@ const form = reactive({
   elevation: 0,
   location: '',
   // 雷达特有信息
-  factoryId: '',
+  slaveId: '',
   orientation: 0,
   description: '',
   createTime: null,
@@ -191,7 +191,7 @@ const commitUpdate = async () => {
       elevation: form.elevation,
       location: form.location,
       // 雷达特有信息
-      factoryId: form.factoryId,
+      slaveId: form.slaveId,
       orientation: form.orientation,
       description: form.description
     });

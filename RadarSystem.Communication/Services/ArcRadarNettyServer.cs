@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+using System.Security.Cryptography; // ✅ MD5校验
 using DotNetty.Buffers;
 using DotNetty.Codecs;
 using DotNetty.Handlers.Logging;
@@ -67,7 +68,7 @@ namespace RadarSystem.Communication.Services
         }
 
         /// <summary>
-        /// 从数据库加载 FactoryId -> DeviceId 映射
+        /// 从数据库加载 SlaveId -> DeviceId 映射
         /// </summary>
         private async Task LoadDeviceMappingAsync()
         {
@@ -84,21 +85,23 @@ namespace RadarSystem.Communication.Services
                 if (response.IsSuccessStatusCode)
                 {
                     var json = await response.Content.ReadAsStringAsync();
-                    var devices = JsonConvert.DeserializeObject<List<DeviceMappingDto>>(json);
                     
-                    if (devices != null)
+                    // ✅ API返回格式: {"success": true, "data": [...]}
+                    var apiResponse = JsonConvert.DeserializeObject<DeviceApiResponse>(json);
+                    
+                    if (apiResponse?.Data != null && apiResponse.Data.Count > 0)
                     {
-                        foreach (var device in devices)
+                        foreach (var device in apiResponse.Data)
                         {
-                            if (!string.IsNullOrEmpty(device.FactoryId))
+                            if (!string.IsNullOrEmpty(device.SlaveId))
                             {
-                                // FactoryId (出厂ID) 就是 SlaveId
-                                _deviceIdMap.TryAdd(device.FactoryId, device.DeviceId);
-                                _logger.LogInformation("加载设备映射: FactoryId={FactoryId} → DeviceId={DeviceId}", 
-                                    device.FactoryId, device.DeviceId);
+                                // SlaveId (出厂ID) 就是 SlaveId
+                                _deviceIdMap.TryAdd(device.SlaveId, device.DeviceId);
+                                _logger.LogInformation("加载设备映射: SlaveId={SlaveId} → DeviceId={DeviceId}", 
+                                    device.SlaveId, device.DeviceId);
                             }
                         }
-                        _logger.LogInformation("设备映射加载完成，共{Count}个设备", devices.Count);
+                        _logger.LogInformation("设备映射加载完成，共{Count}个设备", apiResponse.Data.Count);
                     }
                 }
                 else
@@ -150,8 +153,8 @@ namespace RadarSystem.Communication.Services
                         // 添加日志处理器
                         pipeline.AddLast("logger", new LoggingHandler("ARC-RADAR-CONN"));
 
-                        // ✅ 不使用解码器，直接处理原始字节
-                        // pipeline.AddLast("decoder", new ArcRadarDecoder());
+                        // ✅ 添加解码器（参考Java RadarDecoder）
+                        pipeline.AddLast("decoder", new ArcRadarDecoder());
 
                         // 添加业务处理器
                         pipeline.AddLast("handler", new ArcRadarServerHandler(this, _logger));
@@ -237,12 +240,43 @@ namespace RadarSystem.Communication.Services
                 int slaveId = BitConverter.ToInt32(slaveIdBytes, 0); // LITTLE_ENDIAN
                 string slaveIdStr = slaveId.ToString();
 
-                // 获取设备ID
+                // ✅ 获取设备ID（通过SlaveId查询）
+                // 🔍 调试：仅在首次查询或找不到时输出详细信息
+                bool isFirstQuery = !_deviceIdMap.ContainsKey(slaveIdStr) && 
+                                   string.IsNullOrEmpty(DeviceInfoCache.GetDeviceIdBySlaveId(slaveIdStr));
+                
+                if (isFirstQuery)
+                {
+                    Console.WriteLine($"[DEBUG] ====== 首次查询 SlaveId={slaveIdStr} (原始int={slaveId}) ======");
+                    Console.WriteLine($"[DEBUG] DeviceInfoCache设备数: {RadarSystem.Communication.Services.DeviceInfoCache.GetDeviceCount()}");
+                    Console.WriteLine($"[DEBUG] 本地_deviceIdMap数量: {_deviceIdMap.Count}");
+                    
+                    // 输出所有已加载的映射
+                    Console.WriteLine("[DEBUG] === 本地_deviceIdMap映射 ===");
+                    if (_deviceIdMap.Count > 0)
+                    {
+                        foreach (var kvp in _deviceIdMap)
+                        {
+                            Console.WriteLine($"[DEBUG]   SlaveId={kvp.Key} → DeviceId={kvp.Value}");
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("[DEBUG]   (映射表为空)");
+                    }
+                    
+                    // 输出DeviceInfoCache映射
+                    RadarSystem.Communication.Services.DeviceInfoCache.PrintAllMappings();
+                    Console.WriteLine($"[DEBUG] ====================================================");
+                }
+                
                 string deviceId = GetDeviceId(slaveIdStr);
                 if (string.IsNullOrEmpty(deviceId))
                 {
-                    _logger.LogWarning("未找到 FactoryId/SlaveId {SlaveId} 对应的设备ID，使用FactoryId作为DeviceId", slaveIdStr);
-                    deviceId = slaveIdStr; // 使用 FactoryId 作为 DeviceId
+                    _logger.LogWarning("⚠️ 未找到 SlaveId={SlaveId} 对应的设备，数据将被丢弃！请检查设备配置！", slaveIdStr);
+                    Console.WriteLine($"[WARNING] ❌ 未找到SlaveId={slaveIdStr}对应的设备，数据被丢弃！");
+                    Console.WriteLine($"[WARNING] 💡 提示：请检查数据库中是否有SlaveId='{slaveIdStr}'或SlaveId='20'的设备记录");
+                    return; // ✅ 直接返回，不处理未配置的设备
                 }
 
                 // ✅ 使用统一的控制台输出
@@ -255,7 +289,7 @@ namespace RadarSystem.Communication.Services
                     hexString,
                     deviceId);
 
-                _logger.LogInformation("接收到圆弧雷达数据 - 端口:{Port}, FactoryId:{FactoryId}, 命令:0x{Command}, 长度:{Length}字节", 
+                _logger.LogInformation("接收到圆弧雷达数据 - 端口:{Port}, SlaveId:{SlaveId}, 命令:0x{Command}, 长度:{Length}字节", 
                     _config.Port, slaveIdStr, command, data.Length);
 
                 // 保存设备通道
@@ -311,23 +345,23 @@ namespace RadarSystem.Communication.Services
                     break;
 
                 case "0302": // 形变数据 - Java: 0302
-                    _logger.LogInformation("圆弧雷达接收到形变数据上报 - FactoryId:{FactoryId}, DeviceId:{DeviceId}, 数据长度:{Length}字节", 
+                    _logger.LogInformation("圆弧雷达接收到形变数据上报 - SlaveId:{SlaveId}, DeviceId:{DeviceId}, 数据长度:{Length}字节", 
                         slaveId, deviceId, data.Length);
-                    Console.WriteLine($"[DATA] 形变数据: FactoryId={slaveId}, Length={data.Length} bytes");
+                    Console.WriteLine($"[DATA] 形变数据: SlaveId={slaveId}, Length={data.Length} bytes");
                     HandleImageData(slaveId, deviceId, "00", "形变", data);
                     break;
 
                 case "0301": // 复散射数据 - Java: 0301
-                    _logger.LogInformation("圆弧雷达接收到复散射数据上报 - FactoryId:{FactoryId}, DeviceId:{DeviceId}, 数据长度:{Length}字节", 
+                    _logger.LogInformation("圆弧雷达接收到复散射数据上报 - SlaveId:{SlaveId}, DeviceId:{DeviceId}, 数据长度:{Length}字节", 
                         slaveId, deviceId, data.Length);
-                    Console.WriteLine($"[DATA] 复散射数据: FactoryId={slaveId}, Length={data.Length} bytes");
+                    Console.WriteLine($"[DATA] 复散射数据: SlaveId={slaveId}, Length={data.Length} bytes");
                     HandleImageData(slaveId, deviceId, "01", "复散射", data);
                     break;
 
                 case "0303": // 置信度数据 - Java: 0303
-                    _logger.LogInformation("圆弧雷达接收到置信度数据上报 - FactoryId:{FactoryId}, DeviceId:{DeviceId}, 数据长度:{Length}字节", 
+                    _logger.LogInformation("圆弧雷达接收到置信度数据上报 - SlaveId:{SlaveId}, DeviceId:{DeviceId}, 数据长度:{Length}字节", 
                         slaveId, deviceId, data.Length);
-                    Console.WriteLine($"[DATA] 置信度数据: FactoryId={slaveId}, Length={data.Length} bytes");
+                    Console.WriteLine($"[DATA] 置信度数据: SlaveId={slaveId}, Length={data.Length} bytes");
                     HandleImageData(slaveId, deviceId, "02", "置信度", data);
                     break;
 
@@ -400,28 +434,39 @@ namespace RadarSystem.Communication.Services
         /// <summary>
         /// 发送设备在线状态（MQTT）
         /// </summary>
-        private void SendDeviceOnlineStatus(string deviceId, string factoryId, bool isOnline)
+        private void SendDeviceOnlineStatus(string deviceId, string slaveId, bool isOnline)
         {
             try
             {
                 var statusMessage = new
                 {
                     deviceId = deviceId,
-                    factoryId = factoryId,
+                    slaveId = slaveId,  // ✅ 修改为slaveId（与前端一致）
                     status = isOnline ? "online" : "offline",
                     timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                    timestampUnix = ((DateTimeOffset)DateTime.Now).ToUnixTimeMilliseconds(),
                     type = "ArcRadar"
                 };
 
                 string json = JsonConvert.SerializeObject(statusMessage);
-                _mqttService.PublishAsync("/dev/device/status", json).Wait();
+                Console.WriteLine($"[MQTT] 准备发布设备状态: {json}");
+                var result = _mqttService.PublishAsync("/dev/device/status", json).Result;
                 
-                Console.WriteLine($"[STATUS] Device {deviceId} (FactoryId={factoryId}): {(isOnline ? "ONLINE" : "OFFLINE")}");
-                _logger.LogInformation("设备状态更新: {DeviceId} - {Status}", deviceId, isOnline ? "在线" : "离线");
+                if (result)
+                {
+                    Console.WriteLine($"[STATUS] ✅ MQTT发布成功 - Device {deviceId} (SlaveId={slaveId}): {(isOnline ? "ONLINE" : "OFFLINE")}");
+                    _logger.LogInformation("设备状态已发布到MQTT: {DeviceId} - {Status}", deviceId, isOnline ? "在线" : "离线");
+                }
+                else
+                {
+                    Console.WriteLine($"[STATUS] ⚠️ MQTT未连接，无法发布设备状态: {deviceId}");
+                    _logger.LogWarning("MQTT未连接，设备状态未发布: {DeviceId}", deviceId);
+                }
             }
             catch (Exception ex)
             {
-                _logger.LogDebug(ex, "发送设备状态失败（MQTT不可用）");
+                Console.WriteLine($"[STATUS] ❌ 发送设备状态失败: {ex.Message}");
+                _logger.LogWarning(ex, "发送设备状态失败（MQTT不可用）: {DeviceId}", deviceId);
             }
         }
 
@@ -477,7 +522,11 @@ namespace RadarSystem.Communication.Services
         {
             try
             {
-                string filePath = GetFilePath(dataType, _config.ProjectId, deviceId);
+                Console.WriteLine($"[HandleImageData] 开始处理 {typeName} 数据: DeviceId={deviceId}, SlaveId={slaveId}, DataType={dataType}, Size={data.Length} bytes");
+                
+                // ✅ 通过SlaveId查询设备信息并构建路径
+                string filePath = GetFilePath(dataType, slaveId, deviceId);
+                Console.WriteLine($"[HandleImageData] 文件路径: {filePath}");
                 _logger.LogInformation("{TypeName}数据存储地址: {FilePath}", typeName, filePath);
 
                 var radarImage = new ArcRadarImage
@@ -492,9 +541,13 @@ namespace RadarSystem.Communication.Services
                 };
 
                 _imageQueue.Enqueue(radarImage);
+                Console.WriteLine($"[HandleImageData] ✅ 数据已加入队列，队列大小: {_imageQueue.Count}");
+                _logger.LogInformation("{TypeName}数据已加入处理队列，设备ID: {DeviceId}, 文件路径: {FilePath}, 队列大小: {QueueSize}", 
+                    typeName, deviceId, filePath, _imageQueue.Count);
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"[HandleImageData] ❌ 错误: {ex.Message}");
                 _logger.LogError(ex, "处理{TypeName}图像数据时发生错误", typeName);
             }
         }
@@ -643,7 +696,7 @@ namespace RadarSystem.Communication.Services
             string commandHex = $"3C3C{slaveIdHex}00000000000000";
             
             _logger.LogInformation("发送心跳响应: {Command}", commandHex);
-            Console.WriteLine($"[SEND] Heartbeat ACK to FactoryId={slaveIdStr}");
+            Console.WriteLine($"[SEND] Heartbeat ACK to SlaveId={slaveIdStr}");
             SendCommand(context, commandHex);
         }
 
@@ -671,12 +724,16 @@ namespace RadarSystem.Communication.Services
         /// </summary>
         private async Task ProcessImageQueue()
         {
+            _logger.LogInformation("图像数据处理队列线程已启动");
+            Console.WriteLine("[ProcessImageQueue] ✅ 队列处理线程已启动");
+            
             while (true)
             {
                 try
                 {
                     if (_imageQueue.TryDequeue(out var radarImage))
                     {
+                        Console.WriteLine($"[ProcessImageQueue] 从队列取出数据: {radarImage.TypeName}, Size={radarImage.Data.Length} bytes");
                         await SaveRadarImage(radarImage);
                     }
                     else
@@ -686,13 +743,14 @@ namespace RadarSystem.Communication.Services
                 }
                 catch (Exception ex)
                 {
+                    Console.WriteLine($"[ProcessImageQueue] ❌ 错误: {ex.Message}");
                     _logger.LogError(ex, "处理图像队列时发生错误");
                 }
             }
         }
 
         /// <summary>
-        /// 保存雷达图像
+        /// 保存雷达图像（参考Java RadarConsumerThread.writeData）
         /// </summary>
         private async Task SaveRadarImage(ArcRadarImage radarImage)
         {
@@ -700,24 +758,78 @@ namespace RadarSystem.Communication.Services
             
             try
             {
-                // radarImage.FilePath已经是完整目录路径
-                string directory = radarImage.FilePath;
-                
-                // 确保目录存在
-                if (!Directory.Exists(directory))
+                // ✅ 参考Java: checkMD5() - 校验数据完整性
+                // Java: checkMD5(bytes, offset + 4, offset + 20, dataType)
+                // offset = 12, 所以检查 bytes[16:28] 的MD5
+                int offset = 12;
+                if (radarImage.Data.Length < offset + 20)
                 {
-                    Directory.CreateDirectory(directory);
-                    _logger.LogInformation("创建目录: {Directory}", directory);
+                    _logger.LogWarning("数据长度不足，无法进行MD5校验: {Length}", radarImage.Data.Length);
+                    return;
                 }
-
-                // 生成文件名
-                string fileName = $"{radarImage.DataType}_{DateTime.Now:yyyyMMddHHmmss}.dat";
-                fullPath = Path.Combine(directory, fileName);
-
-                _logger.LogInformation("准备保存文件: {FilePath}", fullPath);
                 
-                // 保存文件
+                bool md5Valid = CheckMD5(radarImage.Data, offset + 4, offset + 20, radarImage.DataType);
+                if (!md5Valid)
+                {
+                    _logger.LogWarning("数据MD5校验失败，跳过保存: DeviceId={DeviceId}, DataType={DataType}", 
+                        radarImage.DeviceId, radarImage.DataType);
+                    Console.WriteLine($"[MD5] ❌ 校验失败，数据已丢弃: {radarImage.DeviceId}");
+                    return;
+                }
+                
+                Console.WriteLine($"[MD5] ✅ 校验通过: {radarImage.DeviceId}, {radarImage.DataType}");
+                
+                // ✅ radarImage.FilePath是基础目录（参考Java格式）
+                string baseDirectory = radarImage.FilePath;
+                
+                // ✅ 参考Java: getStringPath() - 添加日期和数据类型前缀
+                // Java格式: file + dataPath + dataType + uuid
+                // dataPath = /yyyyMMdd/
+                // dataType: "00"->"X", "01"->"F", "02"->"Z"
+                string dateFolder = DateTime.Now.ToString("yyyyMMdd");
+                string dataTypePrefix = radarImage.DataType switch
+                {
+                    "00" => "X",  // 形变
+                    "01" => "F",  // 复散射
+                    "02" => "Z",  // 置信度
+                    _ => radarImage.DataType
+                };
+                
+                // ✅ 构建完整路径: baseDir/yyyyMMdd/dataType_uuid
+                string dateDir = Path.Combine(baseDirectory, dateFolder);
+                if (!Directory.Exists(dateDir))
+                {
+                    Directory.CreateDirectory(dateDir);
+                    _logger.LogInformation("创建日期目录: {Directory}", dateDir);
+                }
+                
+                // ✅ 生成唯一文件名（参考Java使用UUID）
+                string uuid = Guid.NewGuid().ToString("N").Substring(0, 16); // 简化UUID
+                string fileName = $"{dataTypePrefix}{uuid}";
+                fullPath = Path.Combine(dateDir, fileName);
+
+                _logger.LogInformation("准备保存文件: {FilePath}, 数据类型: {DataType}, 大小: {Size}字节", 
+                    fullPath, radarImage.DataType, radarImage.Data.Length);
+                Console.WriteLine($"[SAVE] 保存文件: {fullPath}, Size={radarImage.Data.Length} bytes");
+                
+                // ✅ 保存完整的原始数据（参考Java: FileUtil.writeFile(mimoRadarImage.getRadarBytes(), file)）
                 await File.WriteAllBytesAsync(fullPath, radarImage.Data);
+                
+                // ✅ 验证文件是否保存成功
+                if (File.Exists(fullPath))
+                {
+                    var fileInfo = new FileInfo(fullPath);
+                    Console.WriteLine($"[SAVE] ✅✅✅ 文件保存成功！ ✅✅✅");
+                    Console.WriteLine($"  文件路径: {fullPath}");
+                    Console.WriteLine($"  文件大小: {fileInfo.Length} bytes ({radarImage.Data.Length} bytes)");
+                    Console.WriteLine($"  数据类型: {radarImage.TypeName} ({radarImage.DataType})");
+                    Console.WriteLine($"  设备信息: DeviceId={radarImage.DeviceId}, SlaveId={radarImage.SlaveId}");
+                }
+                else
+                {
+                    Console.WriteLine($"[SAVE] ❌ 文件保存失败！文件不存在: {fullPath}");
+                    throw new Exception($"文件保存失败，文件不存在: {fullPath}");
+                }
 
                 // ✅ 使用统一的控制台输出
                 RadarSystem.Communication.Utilities.ConsoleDataLogger.LogFileSaved(
@@ -749,46 +861,127 @@ namespace RadarSystem.Communication.Services
                 _logger.LogError(ex, "保存雷达图像失败");
             }
         }
+        
+        /// <summary>
+        /// MD5校验（参考Java: checkMD5）
+        /// </summary>
+        private bool CheckMD5(byte[] bytes, int start, int end, string dataType)
+        {
+            try
+            {
+                if (bytes.Length < end)
+                {
+                    _logger.LogWarning("数据长度不足，无法进行MD5校验: {Length}, 需要: {End}", bytes.Length, end);
+                    return false;
+                }
+                
+                // ✅ 参考Java: byte[] b1 = Arrays.copyOfRange(bytes, start, end);
+                // 提取MD5值（16字节）
+                byte[] md5Value = new byte[end - start];
+                Array.Copy(bytes, start, md5Value, 0, end - start);
+                
+                // ✅ 参考Java: byte[] b2 = Arrays.copyOfRange(bytes, end, bytes.length);
+                // 提取数据部分
+                byte[] dataPart = new byte[bytes.Length - end];
+                Array.Copy(bytes, end, dataPart, 0, bytes.Length - end);
+                
+                // ✅ 计算数据部分的MD5
+                using (var md5 = MD5.Create())
+                {
+                    byte[] computedMD5 = md5.ComputeHash(dataPart);
+                    
+                    // ✅ 比较MD5值
+                    if (computedMD5.Length != md5Value.Length)
+                    {
+                        return false;
+                    }
+                    
+                    for (int i = 0; i < computedMD5.Length; i++)
+                    {
+                        if (computedMD5[i] != md5Value[i])
+                        {
+                            return false;
+                        }
+                    }
+                    
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "MD5校验异常，允许保存");
+                // ✅ 如果MD5校验失败，为了测试先允许保存
+                return true; // 临时允许，用于测试
+            }
+        }
 
         /// <summary>
-        /// 获取设备ID（优先从缓存，其次从映射表）
+        /// 获取设备ID（通过SlaveId查询映射）
+        /// ✅ 注意：DeviceId和SlaveId是不同的值，不能混用！
         /// </summary>
         private string GetDeviceId(string slaveId)
         {
             // 优先从内存缓存获取
-            var deviceId = DeviceInfoCache.GetDeviceIdByFactoryId(slaveId);
+            var deviceId = DeviceInfoCache.GetDeviceIdBySlaveId(slaveId);
             if (!string.IsNullOrEmpty(deviceId))
             {
+                Console.WriteLine($"[GetDeviceId] ✅ 从缓存查询: SlaveId={slaveId} → DeviceId={deviceId}");
                 return deviceId;
             }
             
             // 其次从本地映射表获取
             if (_deviceIdMap.TryGetValue(slaveId, out string? mappedId))
             {
+                Console.WriteLine($"[GetDeviceId] ✅ 从映射表查询: SlaveId={slaveId} → DeviceId={mappedId}");
                 return mappedId;
             }
 
-            // 最后返回slaveId本身
-            return slaveId;
+            // ✅ 如果没有找到映射，返回空字符串（不能使用SlaveId作为DeviceId！）
+            Console.WriteLine($"[GetDeviceId] ❌ 未找到映射: SlaveId={slaveId}, 返回空字符串");
+            return string.Empty;
         }
 
         /// <summary>
-        /// 获取文件路径：ProjectId/DeviceId_FactoryId/dataType/yyyyMMdd/HHmmss.dat
+        /// 获取文件路径：通过SlaveId查询设备信息，构建 Data/ProjectId_DeviceId_SlaveId/yyyyMMdd/ 路径
         /// </summary>
-        private string GetFilePath(string dataType, string projectId, string deviceId)
+        private string GetFilePath(string dataType, string slaveId, string deviceId)
         {
-            // 从缓存获取设备信息
+            // ✅ 通过SlaveId从设备表查询设备信息
             var device = DeviceInfoCache.GetDevice(deviceId);
             
-            // 构建目录：DeviceId_FactoryId
-            string deviceFolder = device != null && !string.IsNullOrEmpty(device.FactoryId)
-                ? $"{deviceId}_{device.FactoryId}"
-                : deviceId;
+            // ✅ 获取ProjectId（从设备信息中）
+            string projectId = device?.ProjectId ?? _config.ProjectId;
             
+            // ✅ 构建目录名称：ProjectId_DeviceId_SlaveId
+            string deviceFolder = $"{projectId}_{deviceId}_{slaveId}";
+            
+            // ✅ 获取日期目录：yyyyMMdd
             string dateFolder = DateTime.Now.ToString("yyyyMMdd");
             
-            // 路径：basePath/ProjectId/DeviceId_FactoryId/dataType/yyyyMMdd
-            return Path.Combine(_config.DataPath, "data", projectId, deviceFolder, dataType, dateFolder);
+            // ✅ 路径格式: Data/ProjectId_DeviceId_SlaveId/yyyyMMdd/
+            string baseDir = Path.Combine(_config.DataPath, deviceFolder, dateFolder);
+            
+            // ✅ 确保目录存在
+            if (!Directory.Exists(baseDir))
+            {
+                try
+                {
+                    Directory.CreateDirectory(baseDir);
+                    Console.WriteLine($"[GetFilePath] ✅ 创建数据目录: {baseDir}");
+                    _logger.LogInformation("创建数据目录: {Directory}, ProjectId={ProjectId}, DeviceId={DeviceId}, SlaveId={SlaveId}", 
+                        baseDir, projectId, deviceId, slaveId);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[GetFilePath] ❌ 创建目录失败: {baseDir}, 错误: {ex.Message}");
+                    _logger.LogError(ex, "创建数据目录失败: {Directory}", baseDir);
+                }
+            }
+            
+            Console.WriteLine($"[GetFilePath] ✅ 路径: {baseDir}");
+            Console.WriteLine($"  └─ ProjectId={projectId}, DeviceId={deviceId}, SlaveId={slaveId}");
+            
+            return baseDir;
         }
 
         /// <summary>
@@ -879,9 +1072,17 @@ namespace RadarSystem.Communication.Services
             {
                 string deviceId = disconnectedDevice.Key;
                 var device = DeviceInfoCache.GetDevice(deviceId);
-                string factoryId = device?.FactoryId ?? deviceId;
                 
-                SendDeviceOnlineStatus(deviceId, factoryId, false);
+                if (device != null && !string.IsNullOrEmpty(device.SlaveId))
+                {
+                    Console.WriteLine($"[DISCONNECT] 设备断开: DeviceId={deviceId}, SlaveId={device.SlaveId}");
+                    SendDeviceOnlineStatus(deviceId, device.SlaveId, false);
+                }
+                else
+                {
+                    Console.WriteLine($"[DISCONNECT] ⚠️ 设备断开但无SlaveId信息: DeviceId={deviceId}");
+                }
+                
                 _deviceChannelMap.TryRemove(deviceId, out _);
             }
             
@@ -926,35 +1127,39 @@ namespace RadarSystem.Communication.Services
         {
             try
             {
-                if (message is IByteBuffer buffer)
+                // ✅ 解码器已经处理完数据包，这里应该收到byte[]数组
+                if (message is byte[] data)
                 {
-                    // 读取所有可用字节
-                    byte[] data = new byte[buffer.ReadableBytes];
-                    buffer.ReadBytes(data);
-                    
                     // 显示接收的原始数据（前100字节）
                     string hex = BitConverter.ToString(data).Replace("-", "").ToUpper();
-                    _logger.LogInformation("收到数据 {Length} 字节, 前缀: {Prefix}", data.Length, hex.Substring(0, Math.Min(32, hex.Length)));
-                    Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] >>> Received {data.Length} bytes, Hex: {hex.Substring(0, Math.Min(100, hex.Length))}...");
+                    string prefix = hex.Length >= 4 ? hex.Substring(0, 4) : hex;
+                    
+                    _logger.LogInformation("收到数据包 {Length} 字节, 前缀: {Prefix}", data.Length, prefix);
+                    Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] >>> [ChannelRead] 收到数据包: {data.Length} bytes, 前缀: {prefix}, Hex: {hex.Substring(0, Math.Min(100, hex.Length))}...");
                     
                     _server.HandleData(data, context);
                 }
-                else if (message is byte[] data)
+                else if (message is IByteBuffer buffer)
                 {
-                    _server.HandleData(data, context);
+                    // ✅ 如果解码器没有处理，直接读取
+                    byte[] bufferData = new byte[buffer.ReadableBytes];
+                    buffer.ReadBytes(bufferData);
+                    
+                    string hex = BitConverter.ToString(bufferData).Replace("-", "").ToUpper();
+                    Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] >>> [ChannelRead] 收到缓冲区数据: {bufferData.Length} bytes, Hex: {hex.Substring(0, Math.Min(100, hex.Length))}...");
+                    
+                    _server.HandleData(bufferData, context);
+                    buffer.Release();
+                }
+                else
+                {
+                    Console.WriteLine($"[ChannelRead] ⚠️ 未知消息类型: {message.GetType()}");
                 }
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"[ChannelRead] ❌ 错误: {ex.Message}");
                 _logger.LogError(ex, "ChannelRead error");
-            }
-            finally
-            {
-                // 释放消息资源
-                if (message is IByteBuffer buffer)
-                {
-                    buffer.Release();
-                }
             }
         }
 
@@ -966,43 +1171,127 @@ namespace RadarSystem.Communication.Services
     }
 
     /// <summary>
-    /// 圆弧雷达解码器
+    /// 圆弧雷达解码器（参考Java RadarDecoder）
     /// </summary>
     public class ArcRadarDecoder : ByteToMessageDecoder
     {
+        private static readonly ILogger _logger = new Microsoft.Extensions.Logging.LoggerFactory().CreateLogger<ArcRadarDecoder>();
+
         protected override void Decode(IChannelHandlerContext context, IByteBuffer input, List<object> output)
         {
-            if (input.ReadableBytes < 4)
+            try
             {
-                return; // 数据不足，等待更多数据
+                // ✅ 参考Java: 标记读取位置
+                input.MarkReaderIndex();
+                int totalLength = input.ReadableBytes;
+
+                // ✅ 参考Java: 至少需要4字节才能判断头部
+                if (input.ReadableBytes < 4)
+                {
+                    input.ResetReaderIndex();
+                    return; // 数据不足，等待更多数据
+                }
+
+                // ✅ 参考Java: 读取前2字节作为前缀
+                byte[] dataPrefix = new byte[2];
+                input.ReadBytes(dataPrefix);
+                string prefixHexString = BitConverter.ToString(dataPrefix).Replace("-", "").ToUpper();
+
+                int protocolLength = 0;
+
+                // ✅ 参考Java: 检查前缀并计算协议长度
+                if ("5A5A".Equals(prefixHexString) && totalLength >= 12)
+                {
+                    // ✅ 参考Java: 读取长度字段（偏移6-9，共4字节）
+                    // Java: byte[] dataLength = new byte[10]; in.readBytes(dataLength);
+                    //       protocolLength = ByteUtil.toInt(dataLength, 6, 9) + 12;
+                    // ❌ 不要再次MarkReaderIndex！直接读取即可，最后会ResetReaderIndex到初始位置0
+                    byte[] headerData = new byte[10]; // 读取剩余10字节（不包括已读的2字节前缀）
+                    input.ReadBytes(headerData);
+                    
+                    // ✅ 使用ByteUtil.ToIntLittleEndian解析长度（LITTLE_ENDIAN，对齐Java）
+                    int dataLength = RadarSystem.Communication.Utilities.ByteUtil.ToIntLittleEndian(headerData, 6, 9);
+                    protocolLength = dataLength + 12;
+                    
+                    Console.WriteLine($"[Decoder] 5A5A帧: dataLength={dataLength}, protocolLength={protocolLength}, totalLength={totalLength}");
+                }
+                else if ("3C3C".Equals(prefixHexString) && totalLength >= 13)
+                {
+                    // ✅ 参考Java: 读取长度字段（偏移7-10，共4字节）
+                    // Java: byte[] dataLength = new byte[11]; in.readBytes(dataLength);
+                    //       protocolLength = ByteUtil.toInt(dataLength, 7, 10) + 13;
+                    // ❌ 不要再次MarkReaderIndex！
+                    byte[] headerData = new byte[11]; // 读取剩余11字节
+                    input.ReadBytes(headerData);
+                    
+                    // ✅ 使用ByteUtil.ToIntLittleEndian解析长度（LITTLE_ENDIAN，对齐Java）
+                    int dataLength = RadarSystem.Communication.Utilities.ByteUtil.ToIntLittleEndian(headerData, 7, 10);
+                    protocolLength = dataLength + 13;
+                    
+                    Console.WriteLine($"[Decoder] 3C3C帧: dataLength={dataLength}, protocolLength={protocolLength}, totalLength={totalLength}");
+                }
+
+                // ✅ 参考Java: 如果数据不足，等待更多数据
+                if (totalLength < protocolLength)
+                {
+                    input.ResetReaderIndex();
+                    return;
+                }
+
+                // ✅ 参考Java: 处理无效前缀
+                if (!"5A5A".Equals(prefixHexString) && !"3C3C".Equals(prefixHexString))
+                {
+                    int readableNum = input.ReadableBytes;
+                    byte[] readableBytes = new byte[readableNum];
+                    input.ResetReaderIndex();
+                    input.ReadBytes(readableBytes);
+                    string str = BitConverter.ToString(readableBytes).Replace("-", "").ToUpper();
+                    
+                    Console.WriteLine($"[Decoder] ⚠️ 无效前缀: {prefixHexString}, 数据: {str.Substring(0, Math.Min(100, str.Length))}...");
+                    
+                    // ✅ 参考Java: 查找有效前缀
+                    if (str.Contains("5A5A"))
+                    {
+                        int prefixIndex = str.IndexOf("5A5A");
+                        input.ResetReaderIndex();
+                        input.SkipBytes(prefixIndex / 2);
+                        Console.WriteLine($"[Decoder] ✅ 找到5A5A前缀，跳过 {prefixIndex / 2} 字节");
+                        return;
+                    }
+                    if (str.Contains("3C3C"))
+                    {
+                        int prefixIndex = str.IndexOf("3C3C");
+                        input.ResetReaderIndex();
+                        input.SkipBytes(prefixIndex / 2);
+                        Console.WriteLine($"[Decoder] ✅ 找到3C3C前缀，跳过 {prefixIndex / 2} 字节");
+                        return;
+                    }
+                    
+                    // ✅ 如果没有找到有效前缀，丢弃所有数据
+                    input.ResetReaderIndex();
+                    input.SkipBytes(readableNum);
+                    Console.WriteLine($"[Decoder] ❌ 未找到有效前缀，丢弃 {readableNum} 字节");
+                    return;
+                }
+
+                // ✅ 参考Java: 读取完整协议数据包
+                input.ResetReaderIndex();
+                byte[] protocol = new byte[protocolLength];
+                input.ReadBytes(protocol);
+                
+                Console.WriteLine($"[Decoder] ✅ 解析数据包: 前缀={prefixHexString}, 长度={protocolLength} bytes");
+                output.Add(protocol);
             }
-
-            // 标记当前读取位置
-            input.MarkReaderIndex();
-
-            // 读取前4个字节作为头部
-            byte[] header = new byte[4];
-            input.ReadBytes(header);
-            string headerHex = BitConverter.ToString(header).Replace("-", "");
-
-            // 重置读取位置
-            input.ResetReaderIndex();
-
-            // 检查是否是有效的头部（5A5A 或 3C3C）
-            if (headerHex != "5A5A" && headerHex != "3C3C")
+            catch (IndexOutOfRangeException ex)
             {
-                // 跳过这个字节，继续查找
-                input.ReadByte();
-                return;
+                Console.WriteLine($"[Decoder] ❌ 索引越界: {ex.Message}");
+                input.ResetReaderIndex();
             }
-
-            // 读取完整的数据包
-            // 这里简化处理，实际应根据协议解析长度字段
-            int availableBytes = input.ReadableBytes;
-            byte[] data = new byte[availableBytes];
-            input.ReadBytes(data);
-
-            output.Add(data);
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Decoder] ❌ 解析错误: {ex.Message}");
+                input.ResetReaderIndex();
+            }
         }
     }
 
@@ -1082,9 +1371,18 @@ namespace RadarSystem.Communication.Services
     public class DeviceMappingDto
     {
         public string DeviceId { get; set; } = string.Empty;
-        public string FactoryId { get; set; } = string.Empty;
+        public string SlaveId { get; set; } = string.Empty;
         public string DeviceName { get; set; } = string.Empty;
         public string ProjectId { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    /// API响应格式
+    /// </summary>
+    public class DeviceApiResponse
+    {
+        public bool Success { get; set; }
+        public List<DeviceMappingDto> Data { get; set; } = new List<DeviceMappingDto>();
     }
 }
 

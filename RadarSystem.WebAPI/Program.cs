@@ -14,6 +14,18 @@ using RadarSystem.WebAPI.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// ✅ 配置文件路径：优先使用conf目录，否则使用当前目录
+var confDir = Path.Combine(Directory.GetCurrentDirectory(), "conf");
+if (Directory.Exists(confDir))
+{
+    var confFile = Path.Combine(confDir, "appsettings.json");
+    if (File.Exists(confFile))
+    {
+        builder.Configuration.AddJsonFile(confFile, optional: false, reloadOnChange: true);
+        Console.WriteLine($"✅ 使用配置文件: {confFile}");
+    }
+}
+
 // 配置 Kestrel 监听端口（支持远程访问）
 builder.WebHost.ConfigureKestrel(options =>
 {
@@ -368,11 +380,29 @@ using (var scope = app.Services.CreateScope())
                 Log.Information("已添加字段: Devices.Elevation");
             }
             
-            if (!deviceColumns.Contains("FactoryId"))
+            if (!deviceColumns.Contains("SlaveId"))
             {
-                command.CommandText = "ALTER TABLE Devices ADD COLUMN FactoryId TEXT DEFAULT '';";
+                command.CommandText = "ALTER TABLE Devices ADD COLUMN SlaveId TEXT DEFAULT '';";
                 await command.ExecuteNonQueryAsync();
-                Log.Information("已添加字段: Devices.FactoryId");
+                Log.Information("已添加字段: Devices.SlaveId");
+                Console.WriteLine("[DB Migration] ✅ 添加SlaveId字段");
+            }
+            
+            // ✅ 确保SlaveId字段有唯一索引（同一项目中SlaveId不能重复）
+            try
+            {
+                command.CommandText = @"
+                    CREATE UNIQUE INDEX IF NOT EXISTS idx_devices_slaveid_unique 
+                    ON Devices(SlaveId) 
+                    WHERE SlaveId IS NOT NULL AND SlaveId != '';
+                ";
+                await command.ExecuteNonQueryAsync();
+                Log.Information("✅ SlaveId唯一索引已创建");
+                Console.WriteLine("[DB Migration] ✅ SlaveId唯一索引已创建");
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "创建SlaveId唯一索引失败（可能已存在）");
             }
             
             if (!deviceColumns.Contains("Orientation"))
@@ -1257,7 +1287,7 @@ using (var scope = app.Services.CreateScope())
         {
             RadarSystem.Communication.Services.DeviceInfoCache.AddDevice(
                 device.DeviceId,
-                device.FactoryId ?? string.Empty,
+                device.SlaveId ?? string.Empty,
                 device.ProjectId,
                 device.DeviceName,
                 device.DeviceType ?? string.Empty);
@@ -1319,8 +1349,12 @@ var arcRadarTask = Task.Run(async () =>
         var port = 1030;
         var enabled = true;
         var projectId = "PROJECT001";
-        var dataPath = "../..";
+        // ✅ 修复数据路径：使用绝对路径或相对于WebAPI目录的路径
+        var dataPath = Path.Combine(Directory.GetCurrentDirectory(), "Data");
         var apiPort = "8099";
+        
+        Console.WriteLine($"DataPath解析: {dataPath}");
+        Console.WriteLine($"DataPath存在: {Directory.Exists(dataPath)}");
         
         Console.WriteLine($"Config: Enable={enabled}, Port={port}, ProjectId={projectId}");
         Log.Information("【ArcRadar】Config: Enable={Enable}, Port={Port}", enabled, port);
@@ -1335,11 +1369,25 @@ var arcRadarTask = Task.Run(async () =>
             ApiPort = apiPort
         };
         
-        // 获取服务
-        using var scope = app.Services.CreateScope();
-        var mqttService = scope.ServiceProvider.GetRequiredService<RadarSystem.Communication.Services.MqttService>();
-        var loggerFactory = scope.ServiceProvider.GetRequiredService<ILoggerFactory>();
+        // ✅ 不使用using scope，避免MqttService被释放
+        // 获取服务（全局单例）
+        var mqttService = app.Services.GetRequiredService<RadarSystem.Communication.Services.MqttService>();
+        var loggerFactory = app.Services.GetRequiredService<ILoggerFactory>();
         var serverLogger = loggerFactory.CreateLogger<RadarSystem.Communication.Services.ArcRadarNettyServer>();
+        
+        // ✅ 先确保MQTT连接
+        Console.WriteLine("正在连接MQTT Broker...");
+        var mqttConnected = await mqttService.ConnectAsync();
+        if (mqttConnected)
+        {
+            Console.WriteLine("✅ MQTT连接成功");
+            Log.Information("✅ MQTT连接成功");
+        }
+        else
+        {
+            Console.WriteLine("⚠️ MQTT连接失败，设备状态将无法通过MQTT推送");
+            Log.Warning("MQTT连接失败，但Netty服务器将继续启动");
+        }
         
         // 创建服务器实例
         Console.WriteLine("正在创建ArcRadarNettyServer实例...");
@@ -1360,10 +1408,10 @@ var arcRadarTask = Task.Run(async () =>
         Console.WriteLine("║ ✅ PORT 1030 - ArcRadar Server STARTED SUCCESSFULLY!");
         Console.WriteLine($"║    Listening Port: {port}");
         Console.WriteLine($"║    Project ID: {projectId}");
-        Console.WriteLine($"║    Data Path: {dataPath} (Format: ProjectId/DeviceId_FactoryId/dataType/date)");
+        Console.WriteLine($"║    Data Path: {dataPath} (Format: ProjectId/DeviceId_SlaveId/dataType/date)");
         Console.WriteLine($"║    API Port: {apiPort}");
         Console.WriteLine($"║    Device Cache: {RadarSystem.Communication.Services.DeviceInfoCache.GetDeviceCount()} devices");
-        Console.WriteLine("║    Waiting for FactoryId=20 device connection...");
+        Console.WriteLine("║    Waiting for SlaveId=20 device connection...");
         Console.WriteLine("╚══════════════════════════════════════════════════════════════════════════════╝\n");
         
         Log.Information("✅ PORT 1030 - ArcRadar Server STARTED - Listening on port {Port}, Devices in cache: {DeviceCount}", 

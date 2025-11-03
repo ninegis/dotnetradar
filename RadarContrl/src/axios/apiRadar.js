@@ -660,7 +660,7 @@ export class ApiRadar {
             axios.get(this.customApiUrl+'/sloperadar/api/getlayer?orgid='+orgid).then(res=>resolve(res));
         })
     }
-    static addDevice(projectId,deviceName,deviceId,factoryId,orientation,type,lon,lat,alt,ipv4,port,mqttTopic,status,description){
+    static addDevice(projectId,deviceName,deviceId,slaveId,orientation,type,lon,lat,alt,ipv4,port,mqttTopic,status,description){
         return new Promise(resolve => {
             // ✅ 映射雷达类型到后端期望的DeviceTypeCode（int）
             const typeCodeMap = {
@@ -684,7 +684,7 @@ export class ApiRadar {
                 elevation: parseFloat(alt) || 0,
                 location: `经度:${lon},纬度:${lat},高度:${alt}`,  // 保留用于显示
                 // ✅ 雷达特有信息
-                factoryId: factoryId || '',
+                slaveId: slaveId || '',
                 orientation: parseFloat(orientation) || 0,
                 mqttTopic: mqttTopic || `radar/${deviceId}`,
                 description: description || ''

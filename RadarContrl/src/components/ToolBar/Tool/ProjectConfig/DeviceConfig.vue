@@ -54,8 +54,8 @@
             <el-form-item label="通信端口">
               <el-input-number v-model="form.port" :min="1" :max="65535" placeholder="8888" style="width: 100%"/>
             </el-form-item>
-            <el-form-item :label="$t('backend.factoryId')">
-              <el-input v-model="form.factoryId" placeholder="出厂ID"/>
+            <el-form-item :label="$t('backend.slaveId')">
+              <el-input v-model="form.slaveId" placeholder="出厂ID"/>
             </el-form-item>
             <el-form-item :label="$t('backend.radarOriAngle')">
               <el-input-number v-model="form.orientation" :min="0" :max="360" placeholder="0" style="width: 100%"/>
@@ -137,7 +137,7 @@ const generateProductId=()=>{
   form.ipv4 = form.ipv4 || '127.0.0.1';
   form.port = form.port || 8888;
   // 出厂ID：首位不为0的5位随机数 (10000-99999)
-  form.factoryId = form.factoryId || String(Math.floor(10000 + Math.random() * 90000));
+  form.slaveId = form.slaveId || String(Math.floor(10000 + Math.random() * 90000));
   // 苏州坐标（经度120.6, 纬度31.3）
   form.lon = form.lon || '120.6';
   form.lat = form.lat || '31.3';
@@ -152,12 +152,12 @@ const generateProductId=()=>{
   showMessage(`已生成设备ID: ${form.deviceId}`, 'success');
 }
 const commitUpdate=()=>{
-  if (form['projectId']===undefined||form['type']===undefined||form['deviceName']===undefined||!form.factoryId||!form.orientation||!form.lon||!form.lat||!form.alt){
+  if (form['projectId']===undefined||form['type']===undefined||form['deviceName']===undefined||!form.slaveId||!form.orientation||!form.lon||!form.lat||!form.alt){
     showMessage('需填写完整','warning');
     return;
   }
   ApiRadar.addDevice(
-    form.projectId, form.deviceName, form.deviceId, form.factoryId, form.orientation, 
+    form.projectId, form.deviceName, form.deviceId, form.slaveId, form.orientation, 
     form.type, form.lon, form.lat, form.alt, form.ipv4, 
     form.port, form.mqttTopic, form.status, form.description
   ).then(res=>{

@@ -44,6 +44,13 @@ namespace RadarSystem.Communication.Services
         {
             try
             {
+                // ✅ 如果已连接，直接返回true
+                if (_isConnected && _mqttClient.IsConnected)
+                {
+                    _logger.LogInformation("MQTT已连接，跳过重复连接");
+                    return true;
+                }
+                
                 _logger.LogInformation("正在连接到MQTT代理: {Host}:{Port}", _mqttOptions.ChannelOptions, _mqttOptions.ChannelOptions);
                 
                 var result = await _mqttClient.ConnectAsync(_mqttOptions);

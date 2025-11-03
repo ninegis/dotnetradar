@@ -174,12 +174,13 @@ namespace RadarSystem.Communication.Services
                     return;
                 }
 
+                // ✅ ProjectId从数据库获取（不从配置读取）
                 var arcConfig = new ArcRadarConfiguration
                 {
                     Port = port,
                     Enable = enabled,
-                    ProjectId = config.GetValue<string>("ProjectId") ?? "PROJECT001",
-                    DataPath = config.GetValue<string>("DataPath") ?? "../../",
+                    ProjectId = "PROJECT001", // ✅ 默认值，实际从DeviceInfoCache获取
+                    DataPath = config.GetValue<string>("DataPath") ?? "./Data",
                     ApiPort = config.GetValue<string>("ApiPort") ?? "8099"
                 };
 
@@ -236,12 +237,13 @@ namespace RadarSystem.Communication.Services
                     return;
                 }
 
+                // ✅ ProjectId从数据库获取（不从配置读取）
                 var deviceConfig = new DeviceNettyConfiguration
                 {
                     Port = port,
-                    ProjectId = config.GetValue<string>("ProjectId") ?? "PROJECT001",
-                    DataPath = config.GetValue<string>("DataPath") ?? "../../",
-                    ApiPort = config.GetValue<string>("ApiPort") ?? "80"
+                    ProjectId = "PROJECT001", // ✅ 默认值，实际从DeviceInfoCache获取
+                    DataPath = config.GetValue<string>("DataPath") ?? "./Data",
+                    ApiPort = config.GetValue<string>("ApiPort") ?? "8099"
                 };
 
                 // 创建服务器实例
