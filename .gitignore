@@ -1,5 +1,7 @@
 # ==============================================
 # 通用忽略规则
+# 所有文件默认 LF
+* text=auto eol=lf
 # ==============================================
 # 操作系统生成文件
 .DS_Store                # macOS
@@ -11,6 +13,7 @@ desktop.ini              # Windows
 
 # 编辑器/IDE 配置（按需保留必要配置）
 .idea/                   # IntelliJ 系列
+.vs/                     # 新增：忽略 Visual Studio 缓存目录（解决权限错误）
 .vscode/*
 !.vscode/extensions.json  # 保留扩展配置
 !.vscode/settings.json    # 保留基础设置
@@ -101,4 +104,4 @@ vue.config.js.*
 # 其他工具
 .turbo/
 .next/                   # 若使用 Nuxt.js
-.output/                 # 若使用 Nuxt 3
+.output/                 # 若使用 Nuxt 3s
